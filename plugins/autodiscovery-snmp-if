@@ -1,0 +1,926 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+autodiscovery-snmp-if - Autodiscovery the interfaces of network component via SNMP.
+
+=head1 SYNOPSIS
+
+    autodiscovery-snmp-if [ OPTIONS ]
+
+    autodiscovery-snmp-if --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use JSON;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new(version => "0.1");
+$plugin->has_snmp;
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+
+# --------------------------------------------------
+# Some OIDs
+# --------------------------------------------------
+
+# Base table oids
+my $if_base = "1.3.6.1.2.1.2.2.1";
+
+# Some basics, in/out discards and errros
+my %if_basics = (
+    descr        => "1.3.6.1.2.1.2.2.1.2",
+    speed        => "1.3.6.1.2.1.2.2.1.5",
+    admin_status => "1.3.6.1.2.1.2.2.1.7",
+    oper_status  => "1.3.6.1.2.1.2.2.1.8"
+);
+
+# ifAdminStatus: 1.3.6.1.2.1.2.2.1.7
+my $if_admin_status = {
+    1 => "up",
+    2 => "down",
+    3 => "testing"
+};
+
+# ifOperStatus: 1.3.6.1.2.1.2.2.1.8
+my $if_oper_status = {
+    1 => "up",
+    2 => "down",
+    3 => "testing",
+    4 => "unknown",
+    5 => "dormant",
+    6 => "notPresent",
+    7 => "lowerLayerDown"
+};
+
+# --------------------------------------------------
+# Get cached or latest SNMP data
+# --------------------------------------------------
+
+my $snmp = $plugin->start_snmp_session;
+$snmp->max_msg_size(65535);
+my $result = $snmp->get_table($if_base);
+
+if (!defined $result) {
+    $plugin->exit(
+        status => "CRITICAL",
+        message => "unable to get oid table from host $opt->{host}\n"
+    );
+}
+
+# --------------------------------------------------
+# Let's have a look how many interfaces exists
+# --------------------------------------------------
+
+my $ifs = {};
+
+foreach my $oid (keys %$result) {
+    if ($oid =~ /^\Q$if_basics{descr}\E\.(.+)/) {
+        my $if = $1;
+
+        foreach my $key (keys %if_basics) {
+            my $oid = $if_basics{$key};
+            if (!exists $result->{"$oid.$if"}) {
+                die "oid $oid.$if does not exists";
+            }
+            $ifs->{$if}->{$key} = $result->{"$oid.$if"};
+        }
+
+        $ifs->{$if}->{admin_status_str} = $if_oper_status->{ $ifs->{$if}->{admin_status} };
+        $ifs->{$if}->{oper_status_str} = $if_oper_status->{ $ifs->{$if}->{oper_status} };
+    }
+}
+
+$plugin->exit(
+    status => "OK",
+    data => $ifs
+);
+
+=example
+
+{
+   "status" : "OK",
+   "data" : {
+      "33" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B9"
+      },
+      "32" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B8"
+      },
+      "63" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C15"
+      },
+      "21" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : ""
+      },
+      "90" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D18"
+      },
+      "7" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A7"
+      },
+      "26" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B2"
+      },
+      "80" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D8"
+      },
+      "18" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A18"
+      },
+      "16" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A16"
+      },
+      "44" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B20"
+      },
+      "55" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C7"
+      },
+      "27" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B3"
+      },
+      "84" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D12"
+      },
+      "74" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D2"
+      },
+      "233" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN29"
+      },
+      "57" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C9"
+      },
+      "61" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C13"
+      },
+      "20" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A20"
+      },
+      "92" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D20"
+      },
+      "89" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D17"
+      },
+      "232" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN28"
+      },
+      "10" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A10"
+      },
+      "31" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B7"
+      },
+      "35" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B11"
+      },
+      "11" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A11"
+      },
+      "91" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D19"
+      },
+      "78" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D6"
+      },
+      "87" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D15"
+      },
+      "93" : {
+         "oper_status" : "2",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "D21"
+      },
+      "77" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D5"
+      },
+      "214" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN10"
+      },
+      "65" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C17"
+      },
+      "29" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B5"
+      },
+      "50" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C2"
+      },
+      "39" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B15"
+      },
+      "64" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C16"
+      },
+      "12" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A12"
+      },
+      "41" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B17"
+      },
+      "58" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C10"
+      },
+      "15" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A15"
+      },
+      "81" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D9"
+      },
+      "52" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C4"
+      },
+      "60" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C12"
+      },
+      "56" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C8"
+      },
+      "45" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : ""
+      },
+      "66" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C18"
+      },
+      "73" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "D1"
+      },
+      "76" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D4"
+      },
+      "86" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D14"
+      },
+      "4300" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "HP ProCurve Switch software loopback interface"
+      },
+      "19" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A19"
+      },
+      "62" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C14"
+      },
+      "54" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C6"
+      },
+      "67" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C19"
+      },
+      "70" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : ""
+      },
+      "68" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C20"
+      },
+      "2" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A2"
+      },
+      "17" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A17"
+      },
+      "1" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A1"
+      },
+      "88" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "D16"
+      },
+      "320" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "VLAN16"
+      },
+      "30" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B6"
+      },
+      "82" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D10"
+      },
+      "25" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B1"
+      },
+      "252" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN48"
+      },
+      "333" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN129"
+      },
+      "28" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B4"
+      },
+      "83" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D11"
+      },
+      "75" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D3"
+      },
+      "40" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B16"
+      },
+      "14" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A14"
+      },
+      "59" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C11"
+      },
+      "69" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : ""
+      },
+      "49" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "C1"
+      },
+      "53" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C5"
+      },
+      "234" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN30"
+      },
+      "314" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN110"
+      },
+      "79" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D7"
+      },
+      "205" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "DEFAULT_VLAN"
+      },
+      "22" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : ""
+      },
+      "42" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B18"
+      },
+      "46" : {
+         "oper_status" : "2",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : ""
+      },
+      "13" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A13"
+      },
+      "6" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A6"
+      },
+      "85" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "D13"
+      },
+      "36" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B12"
+      },
+      "3" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A3"
+      },
+      "94" : {
+         "oper_status" : "2",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "D22"
+      },
+      "9" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A9"
+      },
+      "51" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "C3"
+      },
+      "8" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A8"
+      },
+      "38" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B14"
+      },
+      "4" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "A4"
+      },
+      "34" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B10"
+      },
+      "37" : {
+         "oper_status" : "2",
+         "speed" : 10000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "down",
+         "admin_status" : "1",
+         "descr" : "B13"
+      },
+      "216" : {
+         "oper_status" : "1",
+         "speed" : 0,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "VLAN12"
+      },
+      "43" : {
+         "oper_status" : "1",
+         "speed" : 1000000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "B19"
+      },
+      "5" : {
+         "oper_status" : "1",
+         "speed" : 100000000,
+         "admin_status_str" : "up",
+         "oper_status_str" : "up",
+         "admin_status" : "1",
+         "descr" : "A5"
+      }
+   }
+}

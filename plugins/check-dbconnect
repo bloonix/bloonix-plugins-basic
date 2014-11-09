@@ -1,0 +1,174 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-dbconnect - Plugin to check ports.
+
+=head1 SYNOPSIS
+
+    check-dbconnect [ OPTIONS ]
+
+    check-dbconnect --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use DBI;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.7");
+
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(mandatory => 1);
+$plugin->has_database_driver(mandatory => 1);
+$plugin->has_database_name;
+$plugin->has_login_username;
+$plugin->has_login_password;
+$plugin->has_use_ssl;
+$plugin->has_login_secret_file;
+
+$plugin->example(
+    description => [ "Connect to a mysql instance" ],
+    arguments => [
+        driver => "mysql",
+        host => "localhost",
+        port => 3306,
+        warning => 2,
+        critical => 3,
+        username => "bloonix",
+        password => "secret"
+    ]
+);
+
+$plugin->example(
+    description => [ "Connect to a postgresql instance" ],
+    arguments => [
+        driver => "Pg",
+        host => "localhost",
+        port => 5432,
+        warning => 2,
+        critical => 3,
+        username => "bloonix",
+        password => "secret"
+    ]
+);
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+$opt->{database} ||= "";
+
+my $dsn = $opt->{driver} eq "Oracle"
+    ? "dbi:$opt->{driver}:host=$opt->{host};port=$opt->{port};sid=$opt->{database}"
+    : "dbi:$opt->{driver}:database=$opt->{database};host=$opt->{host};port=$opt->{port}";
+
+if ($opt->{use_ssl}) {
+    if ($opt->{driver} eq "mysql") {
+        $dsn .= ";mysql_ssl=1";
+    } elsif ($opt->{driver} eq "Pg") {
+        $dsn .= ";sslmode=require";
+    } else {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "SSL is unsupportet with driver database '$opt->{driver}'"
+        );
+    }
+}
+
+# --------------------------------------------------
+# Port check
+# --------------------------------------------------
+
+my $response = "";
+my $timeout  = ();
+
+# Time measurement
+my $time = $plugin->runtime;
+
+eval {
+    local $SIG{__DIE__} = sub { alarm(0) };
+    local $SIG{ALRM}    = sub { die "timeout\n" };
+    alarm($opt->{timeout});
+
+    my $dbh = DBI->connect(
+        $dsn, # dbi:driver:database:host:port
+        $opt->{username},
+        $opt->{password},
+        { RaiseError => 1 }
+    );
+
+    $dbh->disconnect;
+    alarm(0);
+};
+
+if ($@) {
+    if ($@ =~ /^timeout/) {
+        $timeout = 1;
+    } else {
+        my $err = $@;
+        chomp($err);
+        $err =~ s/\n/ /g;
+        $plugin->exit(
+            status => "CRITICAL",
+            message => $err
+        );
+    }
+}
+
+$time = $plugin->runtime;
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my %output = (
+    status => "OK",
+    stats => { time => sprintf("%.3f", $time) }
+);
+
+if ($timeout) {
+    $output{message} = "check $dsn timed out after ${time}s";
+    $output{tags} = "timeout";
+} else {
+    $output{message} = "check $dsn in ${time}s";
+}
+
+if ($opt->{critical} && $time >= $opt->{critical}) {
+    $output{status} = "CRITICAL";
+} elsif ($opt->{warning} && $time >= $opt->{warning}) {
+    $output{status} = "WARNING";
+}
+
+$output{message} = $output{message};
+$plugin->exit(%output);

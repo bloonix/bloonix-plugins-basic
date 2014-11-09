@@ -1,0 +1,84 @@
+plugin {
+    id 5
+    plugin Filestat.Check
+    command check-filestat
+    datatype statistic
+    category System,Security
+    abstract Check filestat
+    description Check the status of a file.
+}
+
+statistic {
+    statkey size
+    alias File size
+    datatype float
+    units bytes
+    description The size of the file in bytes.
+}
+
+statistic {
+    statkey mode
+    datatype varchar(10)
+    description File mode (type and permissions).
+}
+
+statistic {
+    statkey nlink
+    datatype bigint
+    description Number of (hard) links to the file.
+}
+
+statistic {
+    statkey uid
+    datatype varchar(10)
+    description Numeric user ID of file's owner.
+}
+
+statistic {
+    statkey gid
+    datatype varchar(10)
+    description Numeric group ID of file's owner.
+}
+
+statistic {
+    statkey atime
+    datatype bigint
+    units unixtime
+    description Last access time in seconds since the epoch.
+}
+
+statistic {
+    statkey diff_atime
+    datatype bigint
+    units unixtime
+    description The time in seconds since the last access to the file.
+}
+
+statistic {
+    statkey mtime
+    datatype bigint
+    units unixtime
+    description Last modify time in seconds since the epoch.
+}
+
+statistic {
+    statkey diff_mtime
+    datatype bigint
+    units unixtime
+    description The time in seconds since the last modification of the file.
+}
+
+chart {
+    id 1
+    title File size
+    options {
+        units bytes
+        ylabel size
+        chart-type area
+        series {
+            name size
+            color \#005467
+        }
+    }
+}
+

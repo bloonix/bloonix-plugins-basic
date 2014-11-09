@@ -1,0 +1,229 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-smtp - Plugin to check smtp.
+
+=head1 SYNOPSIS
+
+    check-smtp [ OPTIONS ]
+
+    check-smtp --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2010-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use POSIX qw(strftime);
+use Sys::Hostname qw();
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.8");
+
+$plugin->example(
+    description => "Just a simple SMTP connection to your mail server:",
+    arguments => [
+        host => "mx.host.domain",
+        warning => 5,
+        critical => 8
+    ]
+);
+
+$plugin->example(
+    description => "Login to the SMTP server with username and password:",
+    arguments => [
+        host => "mx.host.domain",
+        warning => 5,
+        critical => 8,
+        username => "bloonix",
+        password => "secret"
+    ]
+);
+
+$plugin->example(
+    description => "Send an email with the subject 'Bloonix test mail' to the mailbox of to\@example.test. In combination with the IMAP check of Bloonix it's possible to check a complete send-and-receive worlflow. If you configure a SMTP check to send a mail with the subject 'Bloonix test mail' then it's possible to pick this mails with the IMAP check.",
+    arguments => [
+        host => "mx.host.domain",
+        warning => 5,
+        critical => 8,
+        from => "from\@example.test",
+        to => "to\@example.test",
+        subject => "Bloonix test mail",
+        "send-mail" => undef
+    ]
+);
+
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(default => 25);
+$plugin->has_bind;
+$plugin->has_use_ssl;
+$plugin->has_login_username;
+$plugin->has_login_password;
+
+$plugin->add_option(
+    name => "Mail from",
+    option => "from",
+    value => "mail-from",
+    value_type => "string",
+    description => "Set this options if you want that a 'MAIL FROM' will be sent."
+);
+
+$plugin->add_option(
+    name => "Mail to",
+    option => "to",
+    value => "mail-to",
+    value_type => "string",
+    description => "Set this options if you want that a 'RCPT TO' will be sent."
+);
+
+$plugin->add_option(
+    name => "The subject of the mail",
+    option => "subject",
+    value => "subject",
+    value_type => "string",
+    default => "Bloonix test mail",
+    regex => qr/^[a-zA-Z_0-9\s]+\z/,
+    description => [
+        "Set this option to modify the subject of the e-mail.",
+        "Allowed characters: a-zA-Z_0-9 and whitespaces",
+    ]
+);
+
+$plugin->add_option(
+    name => "Send the mail to the mailbox?",
+    option => "send-mail",
+    description => [
+        "Set this option if you want that a e-mail is really send",
+        "to the mail account. By default it will only be checked",
+        "if the 'MAIL FROM' and 'RCPT TO' commands are sucessfully",
+        "send."
+    ]
+);
+
+$plugin->has_debug;
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+my $sockmod = undef;
+my $charset = "utf-8";
+my $ctype = "text/plain";
+my $helo = Sys::Hostname::hostname;
+my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
+
+if ($opt->{use_ssl}) {
+    require Net::SMTP::SSL;
+    $sockmod = "Net::SMTP::SSL";
+} else {
+    require Net::SMTP;
+    $sockmod = "Net::SMTP";
+}
+
+my $proto = $opt->{use_ssl} ? "SMTPS" : "SMTP";
+
+# --------------------------------------------------
+# Port check
+# --------------------------------------------------
+
+my $date = strftime ("%a, %d %b %Y %H:%M:%S %z", localtime);
+$plugin->runtime;
+
+$plugin->eval(
+    timeout => $opt->{timeout},
+    add_mtr => $ipaddr,
+    action => "connection",
+    callback => sub {
+        my $smtp = $sockmod->new(
+            Host    => $ipaddr,
+            Port    => $opt->{port},
+            Timeout => $opt->{timeout},
+            Hello   => $helo,
+            Debug   => $opt->{debug},
+        ) or die "connect error - $@";
+
+        if ($opt->{username} && $opt->{password}) {
+            $smtp->auth($opt->{username}, $opt->{password})
+                or die "unable to login as $opt->{username}\n";
+        }
+
+        if ($opt->{from}) {
+            $smtp->mail($opt->{from})
+                or die "error on sending 'MAIL FROM'\n";
+        }
+
+        if ($opt->{to}) {
+            $smtp->to($opt->{to})
+                or die "error on sending 'RCPT TO'\n";
+        }
+
+        if ($opt->{send_mail}) {
+            $smtp->data
+                or die "error on sending 'DATA'\n";
+            $smtp->datasend("From: $opt->{from}\n")
+                or die "error on sending 'From: $opt->{from}'\n";
+            $smtp->datasend("To: $opt->{to}\n")
+                or die "error on sending 'To: $opt->{to}'\n";
+            $smtp->datasend("Subject: $opt->{subject}\n")
+                or die "error on sending 'Subject: $opt->{subject}'\n";
+            $smtp->datasend("Date: $date\n")
+                or die "error on sending 'Date: $date'\n";
+            $smtp->datasend($opt->{subject}."\n")
+                or die "error on sending message: $opt->{subject}\n";
+        }
+
+        $smtp->dataend
+            or die "error on sending data end\n";
+        $smtp->quit
+            or die "unable to quit the smtp connection\n";
+    }
+);
+
+my $time = $plugin->runtime;
+
+my $status = "OK";
+my $message = $opt->{to}
+    ? "mail sent in ${time}s to $opt->{to}, host $opt->{host} port $opt->{port}"
+    : "smtp check processed in ${time}s, host $opt->{host} port $opt->{port}";
+
+if ($time > $opt->{critical}) {
+    $status = "CRITICAL";
+    $plugin->add_mtr($ipaddr);
+} elsif ($time > $opt->{warning}) {
+    $status = "WARNING";
+}
+
+$plugin->exit(
+    status => $status,
+    message => $message,
+    stats => { time => $time }
+);

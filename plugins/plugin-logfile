@@ -1,0 +1,44 @@
+plugin {
+    id 9
+    plugin Logfile.Check
+    command check-logfile
+    datatype statistic
+    category System,Security
+    abstract Check logfile
+    description Logfile statistics.
+}
+
+statistic {
+    statkey warning
+    alias Warning matches
+    datatype bigint
+    units null
+    description The number of warning matches found in logfile.
+}
+
+statistic {
+    statkey critical
+    alias Critical matches
+    datatype bigint
+    units null
+    description The number of critical matches found in logfile.
+}
+
+chart {
+    id 1
+    title Logfile messages
+    options {
+        ylabel alerts
+        units default
+        chart-type line
+        series {
+            name critical
+            color \#005467
+        }
+        series {
+            name warning
+            color \#ff7a0d
+        }
+    }
+}
+

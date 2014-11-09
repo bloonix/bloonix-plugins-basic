@@ -1,0 +1,11 @@
+plugin {
+    id 59
+    plugin Nagios.Wrapper
+    command check-nagios-wrapper
+    datatype none
+    netaccess yes
+    prefer localhost
+    category Nagios
+    abstract Nagios wrapper
+    description Check a service with a nagios plugin.
+}

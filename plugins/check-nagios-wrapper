@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-nagios-wrapper - Just for internal usage!
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+my $plugin = Bloonix::Plugin->new();
+$plugin->version("0.1");
+$plugin->flags("nagios");
+
+$plugin->example(
+    description => "Using nagios checks is very simple. Just enter the full command:",
+    arguments => [
+        "nagios-command" => "check_this_or_that -H 127.0.0.1 -w 4 -c 5"
+    ]
+);
+
+$plugin->add_option(
+    name => "Nagios command",
+    option => "nagios-command",
+    value_type => "string",
+    value => "string",
+    mandatory => 1,
+    description => [
+        "Enter the complete nagios command with arguments but without",
+        "the path to the script. Note that single quotes, backticks",
+        "and backslashes are not allowed characters. Command example:",
+        "check_this_or_that -H 127.0.0.1 -w 4 -c 5"
+    ]
+);
+
+$plugin->parse_options;
+
+$plugin->exit(
+    status => "UNKNOWN",
+    message => "this plugin is only for internal usage"
+);

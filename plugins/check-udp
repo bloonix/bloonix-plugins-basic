@@ -1,0 +1,183 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-udp - Plugin to check ports.
+
+=head1 SYNOPSIS
+
+    check-udp [ OPTIONS ]
+
+    check-udp --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use Time::HiRes qw();
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.5");
+
+$plugin->example(
+    description => "The following example would send the string 'hello server' as UDP request to the server and expects the response 'hello client'. If the response does not match a critical status is triggered.",
+    arguments => [
+        host => "udp.server.test",
+        port => "5300",
+        warning => 3,
+        critical => 5,
+        send => "hello server",
+        match => "hello client"
+    ]
+);
+
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(mandatory => 1);
+$plugin->has_use_ipv6;
+
+$plugin->add_option(
+    name => "Send string",
+    option => "send",
+    value => "string",
+    value_type => "string",
+    mandatory => 1,
+    description => "Send a string to the server."
+);
+
+$plugin->add_option(
+    name => "Match string",
+    option => "match",
+    value => "regex",
+    value_type => "string",
+    mandatory => 1,
+    description => join(" ",
+        "A string that is expected in the response of the server.",
+        "If the string is not found then a critical status is triggered."
+    )
+);
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+
+my $sockmod = undef;
+
+if ($opt->{use_ipv6}) {
+    require IO::Socket::INET6;
+    $sockmod = "IO::Socket::INET6";
+} else {
+    require IO::Socket::INET;
+    $sockmod = "IO::Socket::INET";
+}
+
+# --------------------------------------------------
+# Port check
+# --------------------------------------------------
+
+my $response = "";
+my $timeout  = ();
+
+my %options = (
+    PeerAddr => $opt->{host},
+    PeerPort => $opt->{port},
+    Proto => "udp",
+);
+
+# Time measurement
+$plugin->runtime;
+
+eval {
+    local $SIG{__DIE__} = sub { alarm(0) };
+    local $SIG{ALRM}    = sub { die "timeout" };
+    alarm($opt->{timeout});
+
+    my $sock = $sockmod->new(
+        PeerAddr => $opt->{host},
+        PeerPort => $opt->{port},
+        Proto => "udp"
+    ) or die "unable to open $opt->{host}:$opt->{port}\n";
+
+    $sock->send($opt->{send});
+    Time::HiRes::usleep(500_000);
+    $sock->recv($response, 8192, 0);
+
+    close($sock);
+    alarm(0);
+};
+
+if ($@) {
+    my $err = $@;
+    chomp($err);
+    $err =~ s/\n/ /g;
+
+    if ($err =~ /^timeout/) {
+        $timeout = 1;
+    } else {
+        $plugin->exit(
+            status => "CRITICAL",
+            message => $err
+        );
+    }
+}
+
+my $time = $plugin->runtime;
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my $status = "OK";
+my $message = "the udp check was successful";
+
+if ($timeout) {
+    $status = "CRITICAL";
+    $message = "udp check to $opt->{host}:$opt->{port} timed out after $time seconds";
+} elsif (($opt->{critical} && $time >= $opt->{critical}) || $timeout) {
+    $status = "CRITICAL";
+    $message = "udp check took $time seconds";
+} elsif (!length $response) {
+    $status = "CRITICAL";
+    $message = "no data received from host";
+} elsif ($opt->{match} && $response !~ /$opt->{match}/) {
+    $status = "CRITICAL";
+    $message = "the response does not match the expected string";
+} elsif ($opt->{warning} && $time >= $opt->{warning}) {
+    $status = "WARNING";
+    $message = "udp check took $time seconds";
+}
+
+$plugin->exit(
+    status => $status,
+    message => $message,
+    set_tags => { timeout => $timeout }
+);

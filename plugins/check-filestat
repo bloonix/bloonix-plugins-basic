@@ -1,0 +1,147 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-filestat - Plugin to check file stats.
+
+=head1 SYNOPSIS
+
+    check-filestat [ OPTIONS ]
+
+    check-filestat --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $config_file = "/etc/bloonix/agent/check-filestat.conf";
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.1");
+
+$plugin->example(
+    description => [
+        "NOTE: please create the configuration file '$config_file' on your server and write all file names into the file (one file per line) that the Bloonix agent is allowed to check!",
+        "",
+        "In this example the file of /var/log/test.log is checked. If the file size is higher than 1MB a warning is triggered. If the file size is higher than 5MB a critical is triggered."
+    ],
+    arguments => [
+        file => "/var/log/test.log",
+        warning => "size:gt:1MB",
+        critical => "size:gt:5MB"
+    ]
+);
+
+$plugin->add_option(
+    name => "Filename",
+    option => "file",
+    value => "file",
+    value_type => "string",
+    mandatory => 1,
+    description => "This is the file name to check."
+);
+
+$plugin->has_threshold(
+    keys => [
+        { key => "size", unit => "bytes" },
+        qw(mode nlink uid gid atime diff_atime mtime diff_mtime)
+    ]
+);
+
+$plugin->add_option(
+    name => "Ignore missing file",
+    option => "ignore-missing",
+    description => "Enable this options if it's ok if the file does not exists."
+);
+
+$plugin->one_must_have_options("warning", "critical");
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+my %allowed_files;
+
+if (open my $fh, "<", $config_file) {
+    while (my $line = <$fh>) {
+        $line =~ s/[\r\n]+\z//;
+        $line =~ s/^\s+//;
+        $line =~ s/\s+\z//;
+        $allowed_files{$line} = 1;
+    }
+} else {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "unable to open $config_file for reading - $!"
+    );
+}
+
+if (!exists $allowed_files{ $opt->{file} }) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "the agent has no permission to check the file and is missing in '$config_file'"
+    );
+}
+
+if (!-e $opt->{file}) {
+    if ($opt->{ignore_missing}) {
+        $plugin->exit(
+            status => "OK",
+            message => "the file does not exists, but missing is ok"
+        );
+    }
+
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "the file does not exists"
+    );
+}
+
+if (!-r $opt->{file}) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "the agent has no read permissions on the file"
+    );
+}
+
+# --------------------------------------------------
+# Check file
+# --------------------------------------------------
+
+my $stats = {};
+my $now = time;
+@{$stats}{qw/mode nlink uid gid size atime mtime/} = (stat($opt->{file}))[2..5,7..10];
+$stats->{diff_atime} = $now - $stats->{atime};
+$stats->{diff_mtime} = $now - $stats->{mtime};
+
+my $result = $plugin->check_thresholds(
+    stats => $stats,
+    upshot_keys => [qw(mtime atime size diff_atime diff_mtime)],
+    exit => "yes"
+);

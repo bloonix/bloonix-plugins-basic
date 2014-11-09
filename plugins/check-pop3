@@ -1,0 +1,220 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-pop3 - Plugin to check pop3.
+
+=head1 SYNOPSIS
+
+    check-pop3 [ OPTIONS ]
+
+    check-pop3 --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.7");
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(mandatory => 1);
+$plugin->has_bind;
+$plugin->has_use_ipv6;
+$plugin->has_use_ssl;
+$plugin->has_login_username;
+$plugin->has_login_password;
+$plugin->has_use_apop;
+$plugin->has_debug;
+$plugin->one_must_have_options("warning", "critical");
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+my $sockmod  = undef;
+my $sockopt  = "";
+my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
+
+if ($opt->{use_ssl}) {
+    $sockmod = "IO::Socket::SSL";
+
+    if (!$opt->{use_ipv6}) {
+        $sockopt = "'inet4'";
+    }
+} elsif ($opt->{use_ipv6}) {
+    $sockmod = "IO::Socket::INET6";
+} else {
+    $sockmod = "IO::Socket::INET";
+}
+
+if ($opt->{use_apop}) {
+    eval "use Digest::MD5 qw(md5_hex)";
+
+    if ($@) {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "Digest::MD5 is not installed. Unable to use APOP."
+        );
+    }
+}
+
+my $proto = $opt->{use_ssl} ? "POP3S" : "POP3";
+
+# --------------------------------------------------
+# Load the socket module
+# --------------------------------------------------
+
+eval "use $sockmod $sockopt";
+
+if ($@) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "$sockmod is not installed"
+    );
+}
+
+# --------------------------------------------------
+# Port check
+# --------------------------------------------------
+
+my $response = "";
+
+my %options = (
+    PeerAddr => $ipaddr,
+    PeerPort => $opt->{port},
+    Proto => "tcp",
+);
+
+if ($opt->{bind}) {
+    $options{LocalAddr} = $opt->{bind};
+}
+
+# Time measurement
+$plugin->runtime;
+
+if ($opt->{debug}) {
+    print "start\n";
+}
+
+$plugin->eval(
+    timeout => $opt->{timeout},
+    action => "connection",
+    add_mtr => $ipaddr,
+    callback => sub {
+        if ($opt->{debug}) {
+            print "connect to host $ipaddr port $opt->{port}\n";
+        }
+
+        my $sock = $sockmod->new(%options)
+            or die "unable to connect to host $ipaddr port $opt->{port}\n";
+
+        my $resp = <$sock>;
+
+        if ($resp !~ /^\+\s*OK/) {
+            die "pop3 protocol error in response '$resp'";
+        }
+
+        if ($opt->{debug}) {
+            $resp =~ s/[\r\n]+\z//;
+            print "recv <$resp>\n";
+        }
+
+        my @send;
+
+        if ($opt->{use_apop}) {
+            my ($apopstr) = ($resp =~ /(<.*>)/);
+            my $md5str = md5_hex($apopstr.$opt->{password});
+            push @send, "APOP $opt->{username} $md5str";
+        } elsif ($opt->{username}) {
+            push @send, "USER $opt->{username}";
+            push @send, "PASS $opt->{password}";
+        } else {
+            $response = "OK";
+        }
+
+        foreach my $s (@send) {
+            if ($opt->{debug}) {
+                print "send <$s>\n";
+            }
+
+            print $sock "$s\r\n";
+            my $resp = <$sock>;
+            $resp =~ s/[\r\n]+\z//;
+
+            if ($opt->{debug}) {
+                print "recv <$resp>\n";
+            }
+
+            if ($resp =~ /^\+\s*OK/) {
+                $response = "OK";
+            } else {
+                $response = "ERR";
+                last;
+            }
+        }
+
+        if ($opt->{debug}) {
+            print "send <quit>\n";
+            print "close the socket\n";
+        }
+
+        print $sock "quit\r\n";
+        close($sock);
+    }
+);
+
+my $time = $plugin->runtime;
+
+if ($opt->{debug}) {
+    print "time proceed to request $time\n";
+}
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my $status = "OK";
+my $message = "pop3 check - response in $time seconds";
+
+if ($opt->{critical} && $time >= $opt->{critical} || !$response || $response ne "OK") {
+    $status = "CRITICAL";
+    $plugin->add_mtr($ipaddr);
+} elsif ($opt->{warning} && $time >= $opt->{warning}) {
+    $status = "WARNING";
+}
+
+$plugin->exit(
+    status => $status,
+    message => $message,
+    stats => { time => $time }
+);

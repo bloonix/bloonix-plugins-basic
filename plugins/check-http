@@ -1,0 +1,535 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-http - Plugin to check http requests.
+
+=head1 SYNOPSIS
+
+    check-http [ OPTIONS ]
+
+    check-http --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use IO::Select;
+use IPC::Open3;
+use Time::HiRes;
+
+use constant SYS_READ_LEN => 4096;
+use constant MAX_READ_LEN => 10_485_760;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.13");
+
+$plugin->example(
+    description => join(" ",
+        "The following set of options would send a HTTP request and expects",
+        "the string '^HTTP/1.1 200' in the HTTP header and the string",
+        "'Impress' in the HTTP content."
+    ),
+    arguments => [
+        url => "https://www.bloonix.de/",
+        "match-header" => "^HTTP/1.1 200 OK",
+        match => "Impress",
+        warning => 3,
+        critical => 5
+    ]
+);
+
+$plugin->example(
+    description => join(" ",
+        "The following set of options would check the expiration date of a certificate.",
+        "The format is 'days,days'.",
+        "If the first number of days is exceeded the status WARNING is returned.",
+        "If the second number of days is exceeded the status CRITICAL is returned."
+    ),
+    arguments => [
+        url => "https://www.bloonix.de/",
+        certificate => "7,3",
+        warning => 3,
+        critical => 5
+    ]
+);
+
+$plugin->add_option(
+    name => "URL",
+    option => "url",
+    value => "url",
+    value_type => "string",
+    mandatory => 1,
+    prepare => sub {
+        if ($_[0] =~ m@^https{0,1}://[^/]+\z@) {
+            $_[0] = "$_[0]/";
+        }
+    },
+    regex => qr@^https{0,1}://[^']+/[^\s']*\z@,
+    description => "This is the HTTP or HTTPS request you want to check. Please enter the full URL with the query string.",
+    example => "http://www.bloonix.de/"
+);
+
+$plugin->add_option(
+    name => "Check a string in the HTTP header",
+    option => "match-header",
+    value => "regex",
+    value_type => "string",
+    description => "A text string that is expected in the HTTP header. If the text string is not present then a critical status is returned.",
+    example => "^HTTP/1.1 200 OK"
+);
+
+$plugin->add_option(
+    name => "Check a string in the HTTP content",
+    option => "match",
+    value => "regex",
+    value_type => "string",
+    description => "A text string that is expected in the HTTP content. It is recommended to check the content because it's possible that the webserver responses is a blank site but an successful http return code. If the text string is not present then a critical status is returned.",
+    example => "Impress"
+);
+
+$plugin->add_option(
+    name => "Check for errors in the HTTP content",
+    option => "match-error",
+    value => "regex",
+    value_type => "string",
+    description => "A text string that is not expected in the HTTP content. If the string is present then a critical status is returned."
+);
+
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+
+$plugin->add_option(
+    name => "IP address",
+    option => "host",
+    value => "ipaddr",
+    value_type => "string",
+    description => "A IP address to force the check to connect to. This is very useful if your web page runs behind a loadbalancer and if you want to check a specific IP address."
+);
+
+$plugin->has_use_ipv6;
+$plugin->has_auth_basic;
+
+$plugin->add_option(
+    name => "POST data",
+    option => "data",
+    value => "data",
+    value_type => "string",
+    description => "Data you want to send as post data to the webserver. The data should be formatted in the way the webserver expects the data."
+);
+
+$plugin->add_option(
+    name => "SSL certificate check",
+    option => "certificate",
+    value => "warning-days,critical-days",
+    value_type => "string",
+    regex => qr/^\d+,\d+\z/,
+    description => "Check the expiration date of a certificate. As value the number of days are set before the certificate will expire. The format is 'days,days' where the first number of days is the warning threshold and the second number of days is the critical threshold.",
+    example => "7,3"
+);
+
+$plugin->add_option(
+    name => "User-Agent",
+    option => "user-agent",
+    value => "user-agent",
+    value_type => "string",
+    default => "Bloonix Plugin Check-HTTP",
+    description => "Set the user agent of the curl request."
+);
+
+$plugin->add_option(
+    name => "Verbose status",
+    option => "verbose-status",
+    description => "Add the http header and content to status output."
+);
+
+$plugin->add_option(
+    name => "Verbose error",
+    option => "verbose-error",
+    description => [
+        "Add the http header and content to status output but only",
+        "if the status is not OK."
+    ]
+);
+
+$plugin->add_option(
+    option => "debug",
+    description => "Print the http header and content to stderr for debugging.",
+    command_line_only => 1
+);
+
+# --------------------------------------------------
+# Post check
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+my $http_proto = "";
+
+if ($opt->{url} =~ m!^(\w+?):!) {
+    $http_proto = uc($1);
+}
+
+if (!$opt->{critical} && !$opt->{warning} && !$opt->{cert}) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "option --warning or --critical or --cert must be set"
+    );
+}
+
+if ($opt->{certificate}) {
+    if ($opt->{url} !~ /^https/) {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "https is required to check the certificate"
+        );
+    }
+}
+
+# --------------------------------------------------
+# Protocol check
+# --------------------------------------------------
+
+my ($ipaddr, $proto, $host);
+my $ipv = $opt->{use_ipv6} ? "ipv6" : "ipv4";
+
+if ($opt->{url} =~ m!^(https{0,1})://(.+?)(?:/|$)!) {
+    ($proto, $host) = ($1, $2);
+} else {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "unable to match hostname in the url"
+    );
+}
+
+$host =~ s/:(\d+)\z//;
+$ipaddr = $plugin->get_ip_by_hostname($ipv, $opt->{host} || $host);
+$plugin->result->{debug}->{ipaddr} = $ipaddr;
+
+if ($opt->{use_ipv6}) {
+    $opt->{url} =~ s!^$proto://$host!$proto://[$ipaddr]!;
+} else {
+    $opt->{url} =~ s!^$proto://$host!$proto://$ipaddr!;
+}
+
+$opt->{host} = $host;
+
+# For waitpid() after eval{}.
+my $chld_in = Symbol::gensym();
+my $chld_out = Symbol::gensym();
+my $chld_err = Symbol::gensym();
+my $stdout = "";
+my $stderr = "";
+my $header = "";
+my %header = ();
+my $content = "";
+my $httpstat = "HTTP status unknown";
+my $time = Time::HiRes::gettimeofday();
+my $pid;
+
+eval {
+    local $SIG{__DIE__} = sub { alarm(0) };
+    local $SIG{ALRM}    = sub { die "timeout" };
+
+    alarm($opt->{timeout} + 5);
+
+    my $curl = "curl '$opt->{url}' --max-time $opt->{timeout} --retry 0 --silent --show-error --include --verbose";
+
+    if ($opt->{user_agent}) {
+        $curl .= " -A '$opt->{user_agent}'";
+    }
+
+    if ($opt->{host}) {
+        $curl .= " --header 'Host: $opt->{host}'";
+    }
+
+    if ($opt->{use_ipv6}) {
+        $curl .= " --ipv6 -g";
+    }
+
+    if ($opt->{username} && $opt->{password}) {
+        $curl .= " --basic --user '$opt->{username}:$opt->{password}'";
+    }
+
+    if ($opt->{data}) {
+        $curl .= " --data '$opt->{data}'";
+    }
+
+    if ($opt->{url} =~ /^https/) {
+        $curl .= " --insecure";
+    }
+
+    if ($opt->{debug}) {
+        print STDERR $curl, "\n";
+    }
+
+    $pid = open3($chld_in, $chld_out, $chld_err, $curl);
+    my $sel = IO::Select->new($chld_out, $chld_err);
+    my $tlen = 0;
+
+    close($chld_in);
+
+    my $stdout_done = 0;
+    my $stderr_done = 0;
+
+    OUTER:
+    while (my @ready = $sel->can_read) {
+        foreach my $handle (@ready) {
+            my $len = sysread($handle, my $buf, SYS_READ_LEN);
+
+            if (!defined $len) {
+                next if $! =~ /^Interrupted/;
+                $plugin->exit(
+                    status => "UNKNOWN",
+                    message => "pipe read error: $!"
+                );
+            }
+
+            if ($len) {
+                if ($handle == $chld_out) {
+                    $stdout .= $buf;
+                } elsif ($handle == $chld_err) {
+                    $stderr .= $buf;
+                }
+            } elsif ($handle == $chld_out) {
+                $stdout_done = 1;
+            } elsif ($handle == $chld_err) {
+                $stderr_done = 1;
+            }
+
+            if ($stdout_done && $stderr_done) {
+                last OUTER;
+            }
+
+            if (length $stdout > MAX_READ_LEN || length $stderr > MAX_READ_LEN) {
+                last OUTER;
+            }
+        }
+    }
+
+    alarm(0);
+};
+
+# At first $pid will be checked and if eval{} runs on a
+# timeout then it's better to send a kill 9 signal to
+# the curl process, otherwise curl could hangs forever.
+# If the eval{} context doesn't run on a timeout then
+# the returncode of waitpid() is checked.
+my $err = $@;
+my $ret = 0;
+
+# Calculate the response time
+$time = sprintf("%.6f", Time::HiRes::gettimeofday() - $time);
+
+if ($pid) {
+    if ($err) {
+        kill 9, $pid;
+    }
+
+    waitpid($pid, 0);
+    $ret = $? > 0 ? $? >> 8 : $?;
+}
+
+if ($err =~ /^timeout/ || $ret == 28) {
+    $plugin->exit(
+        status => "CRITICAL",
+        message => "request timed out after $opt->{timeout} seconds, IP: $ipaddr",
+        tags => "timeout",
+        mtr => $plugin->get_mtr($ipaddr)
+    );
+}
+
+if ($err) {
+    chomp($err);
+    $err =~ s/\n/ /g;
+
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => $err
+    );
+}
+
+if ($ret > 0) {
+    my $message = do { $stderr =~ /.*(curl:\s*\(\d+\).+?)\n.*/; $1 };
+
+    if (!$message) {
+        $message = "curl exited with return code $ret";
+    }
+
+    $plugin->exit(
+        status => "CRITICAL",
+        message => $message
+    );
+}
+
+# HTTP/1.1 200 OK
+# HTTP/1.1 500 Internal Server Error
+if ($stdout && $stdout =~ m!^((HTTP/.+?\s+\d+\s+.+?)\015\012.+?(?:\015\012){2})(.*)!sm) {
+    $header = $1;
+    $httpstat = $2;
+    $content = $3;
+}
+
+foreach my $row (split /[\r\n]+/, $header) {
+    if ($row =~ /^([^:]+):(.+)/) {
+        my ($key, $value) = ($1, $2);
+        $key =~ s/^\s+//;
+        $key =~ s/\s+\z//;
+        $value =~ s/^\s+//;
+        $value =~ s/\s+\z//;
+        $header{$key} = $value;
+    }
+}
+
+$plugin->result->{debug}->{"http-header"} = \%header;
+
+if ($opt->{debug}) {
+    print STDERR "---------- status \n";
+    print STDERR "$httpstat\n";
+    print STDERR "---------- header \n";
+    print STDERR $header;
+    print STDERR "---------- content\n";
+    print STDERR $content;
+    print STDERR "---------- end\n";
+}
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+# certificate status
+# 0 = not checked
+# 1 = valid
+# 2 = threshold exceeded, state WARNING
+# 3 = threshold exceeded, state CRITICAL
+# 4 = expired, state CRITICAL
+my $expired  = 0;
+my $certdate = "";
+
+# If $timeout is true then it's not
+# possible to validate the certificate.
+if ($opt->{certificate}) {
+    my ($warndays, $critdays) = split /,/, $opt->{certificate};
+
+    my $warnsecs = time + 86400 * $warndays;
+    my $critsecs = $critdays ? time + 86400 * $critdays : 0;
+
+    my ($curday, $curmonth, $curyear) = (localtime(time))[3..5];
+    my ($warnday, $warnmonth, $warnyear) = (localtime($warnsecs))[3..5];
+    my ($curdate, $warndate, $critdate, $numdate);
+
+    $curyear += 1900;
+    $curmonth += 1;
+    $warnyear += 1900;
+    $warnmonth += 1;
+
+    $curdate  = sprintf("%04d%02d%02d", $curyear, $curmonth, $curday);
+    $warndate = sprintf("%04d%02d%02d", $warnyear, $warnmonth, $warnday);
+
+    if ($critsecs) {
+        my ($critday, $critmonth, $crityear) = (localtime($critsecs))[3..5];
+        $crityear  += 1900;
+        $critmonth += 1;
+        $critdate = sprintf("%04d%02d%02d", $crityear, $critmonth, $critday);
+    }
+
+    if ($stderr =~ /expire\s+date:\s+(2\d\d\d)-(\d\d)-(\d\d)\s/) {
+        $certdate = sprintf("%04d/%02d/%02d", $1, $2, $3);
+        $numdate  = "$1$2$3";
+
+        if ($curdate > $numdate) {
+            $expired = 4;
+        } elsif ($critsecs && $critdate >= $numdate) {
+            $expired = 3;
+        } elsif ($warndate >= $numdate) {
+            $expired = 2;
+        } else {
+            $expired = 1;
+        }
+    } else {
+        # If this happends then the regex must me updated.
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "unable to parse expire date of the ssl certificate, IP: $ipaddr"
+        );
+    }
+}
+
+# @events is necessary to store all warnings,
+# otherwise a certificate warning would be
+# shown but not if the regex mismached.
+my $length = length($content);
+my @events = ("$httpstat", "response in ${time}s", "$length bytes", "IP: $ipaddr");
+my $status = "OK";
+my $mismatch = 0;
+
+if ($opt->{critical} && $time >= $opt->{critical}) {
+    push @events, "critical threshold of $opt->{critical}s exceeded";
+} elsif ($opt->{warning} && $time >= $opt->{warning}) {
+    push @events, "warning threshold of $opt->{warning}s exceeded";
+}
+
+if ($opt->{match_header} && $header !~ /$opt->{match_header}/) {
+    push @events, "header mismatch";
+    $mismatch = 1;
+} elsif ($opt->{match} && $content !~ /$opt->{match}/) {
+    push @events, "content mismatch";
+    $mismatch = 1;
+}
+
+if ($opt->{match_error} && $content =~ /$opt->{match_error}/) {
+    push @events, "error match found '$opt->{match_error}' in content";
+    $mismatch = 1;
+}
+
+if ($expired > 0 && $expired < 4) {
+    push @events, "certificate will expire on $certdate";
+} elsif ($expired == 4) {
+    push @events, "certificate is expired since $certdate";
+}
+
+if (($opt->{critical} && $time >= $opt->{critical}) || $expired >= 3 || $mismatch) {
+    $status = "CRITICAL";
+    $plugin->add_mtr($ipaddr);
+    $plugin->result->{tags} = "timeout";
+} elsif (($opt->{warning} && $time >= $opt->{warning}) || $expired == 2) {
+    $status = "WARNING";
+}
+
+if (($status ne "OK" && $opt->{verbose_error}) || $opt->{verbose_status}) {
+    if (length $content > 10000) {
+        $content = substr($content, 0, 10000);
+    }
+    $plugin->result->{debug}->{"html-content"} = $content;
+}
+
+$plugin->exit(
+    status => $status,
+    message => join(", ", @events),
+    stats => { time => sprintf("%.3f", $time * 1000) }
+);

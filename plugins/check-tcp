@@ -1,0 +1,266 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-tcp - Plugin to check ports.
+
+=head1 SYNOPSIS
+
+    check-tcp [ OPTIONS ]
+
+    check-tcp --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.6");
+
+$plugin->example(
+    description => "The following example would send a HTTP request to the server and expects a HTTP status code of 200 in the reponse. Note that the string 'CRLF' is replaced with an empty line.",
+    arguments => [
+        host => "www.bloonix.de",
+        port => "443",
+        "use-ssl" => undef,
+        warning => 3,
+        critical => 5,
+        send => "GET / HTTP/1.1",
+        send => "Host: bloonix.de",
+        send => "CRLF",
+        match => "HTTP/1.1 200 OK"
+    ]
+);
+
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(mandatory => 1);
+$plugin->has_bind;
+$plugin->has_use_ipv6;
+$plugin->has_use_ssl;
+
+$plugin->add_option(
+    name => "Send string",
+    option => "send",
+    value => "string",
+    value_type => "string",
+    multiple => 1,
+    description => "Send a string to the server."
+);
+
+$plugin->add_option(
+    name => "Read number of lines",
+    option => "lines",
+    default => 1,
+    value => "count lines",
+    value_type => "string",
+    regex => qr/^\d+\z/,
+    description => "A number of lines to read from the servers response. This option only has an effect if the option 'Match string' is set."
+);
+
+$plugin->add_option(
+    name => "Match string",
+    option => "match",
+    value => "regex",
+    multiple => 1,
+    value_type => "string",
+    description => "A string that is expected in the response of the server. If the string is not found then a critical status is triggered. It's possible to add multiple string that are expected, from which only one must be present in the response."
+);
+
+$plugin->add_option(
+    name => "Match all strings",
+    option => "match-all",
+    description => "Expect all strings in the server response. The default is that only one string has to be present."
+);
+
+$plugin->add_option(
+    name => "Missed match",
+    option => "mismatch",
+    value => "status",
+    value_type => "string",
+    default => "CRITICAL",
+    regex => qr/^(OK|WARNING|CRITICAL)\z/i,
+    description => "Which status should be returned if the expected strings are not present. Please set on of the following states: OK, WARNING or CRITICAL"
+);
+
+$plugin->add_option(
+    name => "Send a quit string",
+    option => "quit",
+    value => "string",
+    value_type => "string",
+    description => "A single string to send to the server to close the connection."
+);
+
+$plugin->has_debug;
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+$opt->{mismatch} = uc $opt->{mismatch};
+
+my $sockmod = undef;
+my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
+
+if ($opt->{use_ssl}) {
+    require IO::Socket::SSL;
+
+    if (!$opt->{use_ipv6}) {
+        IO::Socket::SSL->import('inet4');
+    }
+
+    $sockmod = "IO::Socket::SSL";
+} elsif ($opt->{use_ipv6}) {
+    require IO::Socket::INET6;
+    $sockmod = "IO::Socket::INET6";
+} else {
+    require IO::Socket::INET;
+    $sockmod = "IO::Socket::INET";
+}
+
+# --------------------------------------------------
+# Port check
+# --------------------------------------------------
+
+my $response = "";
+
+my %options = (
+    PeerAddr => $ipaddr,
+    PeerPort => $opt->{port},
+    Proto => "tcp",
+);
+
+if ($opt->{bind}) {
+    $options{LocalAddr} = $opt->{bind};
+}
+
+# Time measurement
+$plugin->runtime;
+
+if ($opt->{debug}) {
+    print "start\n";
+}
+
+$plugin->eval(
+    timeout => $opt->{timeout},
+    add_mtr => $ipaddr,
+    action => "connection",
+    callback => sub {
+        if ($opt->{debug}) {
+            print "connect to $opt->{host} $opt->{port}\n";
+        }
+
+        my $sock = $sockmod->new(%options)
+            or die "unable to connect to $opt->{host}:$opt->{port}\n";
+
+        if (@{$opt->{send}}) {
+            foreach my $str (@{$opt->{send}}) {
+                if ($str eq "CRLF") {
+                    $str = "\r\n";
+                }
+                if ($opt->{debug}) {
+                    print "send string <$str>\n";
+                }
+                print $sock "$str\r\n";
+            }
+        }
+
+        if (@{$opt->{match}}) {
+            if ($opt->{debug}) {
+                print "try to read $opt->{lines} lines from socket\n";
+            }
+
+            foreach my $n (1..$opt->{lines}) {
+                my $line = <$sock>;
+                $line =~ s/[\r\n]+\z//;
+
+                if ($opt->{debug}) {
+                    print "recv <$line>\n";
+                }
+
+                $response .= $line;
+            }
+        }
+
+        if ($opt->{quit}) {
+            if ($opt->{debug}) {
+                print "send quit string <$opt->{quit}>\n";
+            }
+            print $sock "$opt->{quit}\r\n";
+        }
+
+        if ($opt->{debug}) {
+            print "close the socket\n";
+        }
+
+        close($sock);
+    }
+);
+
+my $time = $plugin->runtime;
+
+if ($opt->{debug}) {
+    print "time proceed to request $time\n";
+}
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my $status = "OK";
+my $matches = 0;
+my $message = "TCP connect - response time in $time";
+
+if ($opt->{critical} && $time >= $opt->{critical}) {
+    $status = "CRITICAL";
+    $plugin->add_mtr($ipaddr);
+} elsif (@{$opt->{match}}) {
+    foreach my $match (@{$opt->{match}}) {
+        if ($response =~ /$match/) {
+            $matches++;
+        }
+    }
+
+    if (($opt->{all} && $matches != @$opt->{match}) || !$matches) {
+        $status = $opt->{mismatch};
+    }
+}
+
+if ($status eq "OK" && $opt->{warning} && $time >= $opt->{warning}) {
+    $status = "WARNING";
+}
+
+$plugin->exit(
+    status => $status,
+    message => $message,
+    stats => { time => $time }
+);

@@ -1,0 +1,180 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-dns - Plugin to check dns.
+
+=head1 SYNOPSIS
+
+    check-dns [ OPTIONS ]
+
+    check-dns --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2013-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use Net::DNS::Resolver;
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.3");
+
+$plugin->example(
+    description => "In the following example a DNS request is send to the nameserver dns.example.test for the domain bloonix.de and the record type A. In the response of the DNS server the IP address 192.168.10.11 is expected. A CRITICAL status is triggered if the IP address is not present in the response.",
+    arguments => [
+        nameserver => "dns.example.test",
+        hostname => "bloonix.de",
+        ipaddr => "192.168.10.11",
+        type => "A"
+    ]
+);
+
+$plugin->add_option(
+    name => "The nameserver to connect",
+    option => "nameserver",
+    value => "ip,ip,ip",
+    value_type => "string",
+    mandatory => 1,
+    description => "This is the IP address of the DNS server to request."
+);
+
+$plugin->add_option(
+    name => "The hostname to query",
+    option => "hostname",
+    value => "hostname",
+    value_type => "string",
+    mandatory => 1,
+    description => "This is the hostname or address to query."
+);
+
+$plugin->add_option(
+    name => "The record type to query",
+    option => "type",
+    value => "type",
+    value_type => "string",
+    default => "A",
+    regex => qr/^(A|AAAA)\z/,
+    description => "This is the record type that is expected in combination with the IP address. It's possible to search for type A or AAAA."
+);
+
+$plugin->add_option(
+    name => "The IP address to expect",
+    option => "ipaddr",
+    value => "address",
+    value_type => "string",
+    mandatory => 1,
+    description => "Enter a IP address that is expected in combination with the record type.",
+);
+
+$plugin->has_warning(default => 3);
+$plugin->has_critical(default => 5);
+$plugin->has_timeout(default => 10);
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+$opt->{nameserver} = [ split /,/, $opt->{nameserver} ];
+
+# --------------------------------------------------
+# DNS request
+# --------------------------------------------------
+
+my $found = 0;
+my $time = $plugin->runtime;
+my @found;
+
+eval {
+    local $SIG{__DIE__} = sub { alarm(0) };
+    local $SIG{ALRM} = sub { die "timeout" };
+    alarm($opt->{timeout});
+
+    my $res = Net::DNS::Resolver->new(nameservers => $opt->{nameserver});
+    my $query = $res->query($opt->{hostname}, $opt->{type});
+
+    if ($query) {
+        foreach my $rr ($query->answer) {
+            push @found, $rr->address;
+            if ($rr->address eq $opt->{ipaddr} && (!$opt->{type} || $rr->type eq $opt->{type})) {
+                $found = 1;
+                last;
+            }
+        }
+    }
+
+    alarm(0);
+};
+
+$time = $plugin->runtime;
+
+if ($@) {
+    my $err = $@;
+    chomp($err);
+
+    if ($err =~ /^timeout/) {
+        $plugin->exit(
+            status => "CRITICAL",
+            message => "the check runs on a timeout after $opt->{timeout} seconds",
+            tags => "timeout"
+        );
+    } else {
+        $plugin->exit(
+            status => "CRITICAL",
+            message => "an unexpected error occurs - $err"
+        );
+    }
+}
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my $status  = "OK";
+my $message = "";
+
+if ($found) {
+    $message = "record found for $opt->{hostname} $opt->{type} $opt->{ipaddr}";
+} else {
+    $message = "record not found for $opt->{hostname} $opt->{type} $opt->{ipaddr}";
+    $status = "CRITICAL";
+
+    if (@found) {
+        $message .= ", found instead ". join(",", @found);
+    }
+}
+
+if ($status eq "OK") {
+    if ($opt->{critical} && $time > $opt->{critical}) {
+        $status = "CRITICAL";
+    } elsif ($opt->{warning} && $time > $opt->{warning}) {
+        $status = "WARNING";
+    }
+}
+
+$plugin->exit(
+    status => $status,
+    message => "$message, response in ${time}s",
+    stats => { time => $time }
+);

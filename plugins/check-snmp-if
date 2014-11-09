@@ -1,0 +1,283 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-snmp-if - Plugin to check network interfaces by snmp.
+
+=head1 SYNOPSIS
+
+    check-snmp-if [ OPTIONS ]
+
+    check-snmp-if --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use Net::SNMP;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new(version => "0.1");
+
+$plugin->add_option(
+    name => "Network interface",
+    option => "interface",
+    value => "interface",
+    value_type => "string",
+    mandatory => 1,
+    description => "This is the network interface you want to check."
+);
+
+$plugin->has_snmp;
+
+$plugin->has_threshold(
+    keys => [
+        { key => "in_discards", unit => "bytes" },
+        { key => "in_errors", unit => "bytes" },
+        { key => "out_discards", unit => "bytes" },
+        { key => "out_errors", unit => "bytes" },
+        { key => "in_octets", unit => "bytes" },
+        { key => "in_ucast_pkts", unit => "bytes" },
+        { key => "in_nucast_pkts", unit => "bytes" },
+        { key => "in_multicast_pkts", unit => "bytes" },
+        { key => "in_broadcast_pkts", unit => "bytes" },
+        { key => "out_octets", unit => "bytes" },
+        { key => "out_ucast_pkts", unit => "bytes" },
+        { key => "out_nucast_pkts", unit => "bytes" },
+        { key => "out_multicast_pkts", unit => "bytes" },
+        { key => "out_broadcast_pkts", unit => "bytes" }
+    ]
+);
+
+$plugin->add_option(
+    name => "Trigger a CRITICAL if not 'up'",
+    option => "crit-if-not-up",
+    description => "This flag enables to check if the status of ifAdminStatus is different from ifOperStatus. That means that if ifAdminStatus is configured to be up then ifOperStatus must also been up."
+);
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+
+# --------------------------------------------------
+# Some OIDs
+# --------------------------------------------------
+
+# Base table oids
+my $if_base    = "1.3.6.1.2.1.2.2.1";
+my $if_hc_base = "1.3.6.1.2.1.31.1.1.1";
+
+# Some basics, in/out discards and errros
+my %if_basics = (
+    descr        => "1.3.6.1.2.1.2.2.1.2",
+    #speed        => "1.3.6.1.2.1.2.2.1.5",
+    admin_status => "1.3.6.1.2.1.2.2.1.7",
+    oper_status  => "1.3.6.1.2.1.2.2.1.8",
+    in_discards  => "1.3.6.1.2.1.2.2.1.13",
+    in_errors    => "1.3.6.1.2.1.2.2.1.14",
+    out_discards => "1.3.6.1.2.1.2.2.1.19",
+    out_errors   => "1.3.6.1.2.1.2.2.1.20",
+);
+
+# 32 bit counters
+my %if_counters = (
+    in_octets       => "1.3.6.1.2.1.2.2.1.10",
+    in_ucast_pkts   => "1.3.6.1.2.1.2.2.1.11",
+    in_nucast_pkts  => "1.3.6.1.2.1.2.2.1.12",
+    out_octets      => "1.3.6.1.2.1.2.2.1.16",
+    out_ucast_pkts  => "1.3.6.1.2.1.2.2.1.17",
+    out_nucast_pkts => "1.3.6.1.2.1.2.2.1.18",
+);
+
+# High capacity counters
+my %if_hc_counters = (
+    in_octets          => "1.3.6.1.2.1.31.1.1.1.6",
+    in_ucast_pkts      => "1.3.6.1.2.1.31.1.1.1.7",
+    in_multicast_pkts  => "1.3.6.1.2.1.31.1.1.1.8",
+    in_broadcast_pkts  => "1.3.6.1.2.1.31.1.1.1.9",
+    out_octets         => "1.3.6.1.2.1.31.1.1.1.10",
+    out_ucast_pkts     => "1.3.6.1.2.1.31.1.1.1.11",
+    out_multicast_pkts => "1.3.6.1.2.1.31.1.1.1.12",
+    out_broadcast_pkts => "1.3.6.1.2.1.31.1.1.1.13",
+);
+
+# ifAdminStatus: 1.3.6.1.2.1.2.2.1.7
+my $if_admin_status = {
+    1 => "up",
+    2 => "down",
+    3 => "testing"
+};
+
+# ifOperStatus: 1.3.6.1.2.1.2.2.1.8
+my $if_oper_status = {
+    1 => "up",
+    2 => "down",
+    3 => "testing",
+    4 => "unknown",
+    5 => "dormant",
+    6 => "notPresent",
+    7 => "lowerLayerDown"
+};
+
+# --------------------------------------------------
+# Get cached or latest SNMP data
+# --------------------------------------------------
+
+my ($result, $hc_result);
+my ($connection_string, $cache_file, $file_stat);
+my $time;
+
+$connection_string = join("_", "bloonix-check-snmp-if-cache", $opt->{host}, $opt->{community}, $opt->{port});
+$connection_string =~ s/\W/_/g;
+$cache_file = join("/", $plugin->plugin_libdir, $connection_string);
+$cache_file .= ".json";
+$file_stat = [ stat($cache_file) ];
+
+if (defined $file_stat->[10] && $file_stat->[10] + 10 >= time) {
+    if (open my $fh, "<", $cache_file) {
+        my $data = do { local $/; <$fh> };
+        $data = JSON->new->decode($data);
+        $result = $data->{if}->{result};
+        $hc_result = $data->{if}->{hc_result};
+        $time = $data->{time};
+    } else {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "unable to open file '$cache_file' for reading - $!"
+        );
+    }
+} else {
+    my $snmp = $plugin->start_snmp_session;
+    $snmp->max_msg_size(65535);
+    $result = $snmp->get_table($if_base);
+    $hc_result = $snmp->get_table($if_hc_base);
+    $time = time;
+
+    if (open my $fh, ">", $cache_file) {
+        print $fh JSON->new->encode({
+            time => $time,
+            if => {
+                result => $result,
+                hc_result => $hc_result
+            }
+        });
+    } else {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "unable to open file '$cache_file' for writing - $!"
+        );
+    }
+}
+
+if (!defined $result) {
+    $plugin->exit(
+        status => "CRITICAL",
+        message => "unable to get oid table from host $opt->{host}\n"
+    );
+}
+
+# --------------------------------------------------
+# Let's have a look how many interfaces exists
+# --------------------------------------------------
+
+my $if;
+
+foreach my $oid (keys %$result) {
+    if ($oid =~ /^\Q$if_basics{descr}\E\.(.+)/) {
+        if ($1 eq $opt->{interface}) {
+            $if = $opt->{interface};
+        }
+    }
+}
+
+if (!$if) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "interface $if does not exists"
+    );
+}
+
+# --------------------------------------------------
+# Fetch the statistics from the snmp result
+# --------------------------------------------------
+
+my $stat = { };
+
+foreach my $key (keys %if_basics) {
+    my $oid = $if_basics{$key};
+    if (!exists $result->{"$oid.$if"}) {
+        die "oid $oid.$if does not exists";
+    }
+    $stat->{$key} = $result->{"$oid.$if"};
+}
+
+my $counters = $hc_result && exists $hc_result->{"1.3.6.1.2.1.31.1.1.1.6"}
+    ? \%if_hc_counters
+    : \%if_counters;
+
+foreach my $key (keys %$counters) {
+    my $oid = $counters->{$key};
+    if (!exists $result->{"$oid.$if"}) {
+        die "oid $oid.$if does not exists";
+    }
+    $stat->{$key} = $result->{"$oid.$if"};
+}
+
+$stat->{admin_status} = $if_oper_status->{ $stat->{admin_status} };
+$stat->{oper_status} = $if_oper_status->{ $stat->{oper_status} };
+delete $stat->{descr};
+
+my %delta_keys = (%if_counters, %if_hc_counters);
+
+foreach my $key (keys %delta_keys) {
+    if (!exists $stat->{$key}) {
+        $stat->{$key} = 0;
+    }
+}
+
+$plugin->delta(time => $time, stat => $stat, keys => [ keys %delta_keys ]);
+
+# --------------------------------------------------
+# Check thresholds
+# --------------------------------------------------
+
+if ($opt->{crit_if_not_up}) {
+    if ($stat->{admin_status} eq "up" && $stat->{oper_status} ne "up") {
+        $plugin->exit(
+            status => "CRITICAL",
+            message => "ifAdminStatus=$stat->{admin_status}, ifOperStatus=$stat->{oper_status}",
+            stats => $stat
+        );
+    }
+}
+
+$plugin->check_thresholds(
+    stats => $stat,
+    upshot_keys => [qw(admin_status oper_status in_octets out_octets)],
+    exit => "yes"
+);

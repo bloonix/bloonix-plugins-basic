@@ -1,0 +1,145 @@
+bloonix-plugins-basic (0.21-1) unstable; urgency=low
+
+    * Fixed arguments warn-count and warning of check-logfile.
+    * Fixed the search order for warnings and criticals of check-logfile.
+    * Improved argument examples for check-logfile.
+    * Fixed a typo in check-logfile description.
+
+ -- Jonny Schulz <js@bloonix.de>  Sat, 08 Nov 2014 16:33:03 +0100
+
+bloonix-plugins-basic (0.20-1) unstable; urgency=low
+
+    * Updated the license information.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 03 Nov 2014 21:13:14 +0100
+
+bloonix-plugins-basic (0.19-1) unstable; urgency=low
+
+    * An mtr result is added if the extern checks fails.
+    * Limit the maximum packages for check-ping to 10.
+    * Licence added and old releases deleted.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 26 Aug 2014 11:33:14 +0200
+
+bloonix-plugins-basic (0.18-1) unstable; urgency=low
+
+    * Implement SSL to check-ftp.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 27 May 2014 14:27:55 +0200
+
+bloonix-plugins-basic (0.16-1) unstable; urgency=low
+
+    * Added the new check check-filestat.
+
+ -- Jonny Schulz <js@bloonix.de>  Sat, 12 Apr 2014 13:17:08 +0200
+
+bloonix-plugins-basic (0.14-1) unstable; urgency=low
+
+    * Complete rewrite of all plugins.
+    * The statistics of all plugins is now printed in JSON format.
+
+ -- Jonny Schulz <js@bloonix.de>  Sat, 23 Mar 2014 00:00:00 +0100
+
+bloonix-plugins-basic (0.12-1) unstable; urgency=low
+
+  * kill -9 is now send to the curl process if eval{}
+    returns an error.
+  * check-imap is a complete rewrite. Now it's possible to
+    check mail account with check-smtp and check-imap in
+    conjunction. check-smtp sends the mail and check-imap
+    collects it.
+  * Plugin check-smtp accept now --subject as option.
+  * Now it's not possible any more to set the path and
+    filename for the plugin check-logfile and paramater -d.
+  * Added CONFIG_PATH to check-dbconnect.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 17 Sep 2012 00:18:05 +0200
+
+bloonix-plugins-basic (0.11-1) unstable; urgency=low
+
+  * Improved check-dbconnect and added parameter -f.
+  * Moved $time calculation in check-http to an earlier place.
+  * Added new plugin check-dns.
+  * Added plugin-plain for plain data.
+  * Kicked YAML::Syck from check-logfile.
+  * Fixed a little bug with the error handling of argument --error
+    and added the curl parameter --max-time for a better timeout
+    handling.
+  * check-logfile now parses a logfile if the logfile was rotated.
+    By default the old logfile with extension .1 will be parsed.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 14 Mar 2012 20:01:04 +0100
+
+bloonix-plugins-basic (0.9-1) unstable; urgency=low
+
+  * Updated the plugin-* files.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 29 Nov 2011 12:52:29 +0100
+
+bloonix-plugins-basic (0.8-1) unstable; urgency=low
+
+  * Now it's possible to request host:port with check-http.
+  * Fixed check-http: the request must not end with a slash.
+
+ -- Jonny Schulz <js@bloonix.de>  Thu, 20 Oct 2011 00:28:06 +0200
+
+bloonix-plugins-basic (0.7-1) unstable; urgency=low
+
+  * Kicked unused option o_stat.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 01 Jul 2011 15:09:06 +0200
+
+bloonix-plugins-basic (0.6-1) unstable; urgency=low
+
+  * Added content length in output for check-http.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 21 Jun 2011 11:35:50 +0200
+
+bloonix-plugins-basic (0.5-1) unstable; urgency=low
+
+  * Fixed a bug in check-http. A correct status wasn't
+    printed if a certification is expired. In addion
+    it's possible now to set when a warning state and
+    when a critical state should be returned if a
+    certificate is expired in some days.
+  * Fixed a bug in check-logfile. The statistics for
+    critical was the same as the warning value.
+
+ -- Jonny Schulz <js@bloonix.de>  Thu, 24 Feb 2011 10:21:40 +0100
+
+bloonix-plugins-basic (0.4-1) unstable; urgency=low
+
+  * Renamed all plugin files from *.plugin to plugin-*.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 27 Dec 2010 10:17:11 +0100
+
+bloonix-plugins-basic (0.3-2) unstable; urgency=low
+
+  * Build with gpg key.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 12 Dec 2010 03:27:37 +0100
+
+bloonix-plugins-basic (0.3-1) unstable; urgency=low
+
+  * Fixed argument handling for warning and critical
+    in check-logfile and now it's possible to set
+    a path + filename for the data file.
+
+ -- Jonny Schulz <js@bloonix.de>  Thu, 25 Nov 2010 20:21:01 +0100
+
+bloonix-plugins-basic (0.2-1) unstable; urgency=low
+
+  * Fixed header and content regex and removes //sm
+  * Fixed output line for check-http (HTTPS) and
+    check-smtp (SMTPS).
+  * Kicked option --stat from all plugins, because
+    statistics will be printed by default on stdout.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 17 Nov 2010 15:55:42 +0100
+
+bloonix-plugins-basic (0.1-1) unstable; urgency=low
+
+  * Initial release.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 02 Aug 2010 15:21:15 +0200
+

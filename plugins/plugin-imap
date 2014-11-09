@@ -1,0 +1,35 @@
+plugin {
+    id 8
+    plugin IMAP.Check
+    command check-imap
+    datatype statistic
+    category Network,Mail
+    netaccess yes
+    worldwide yes
+    prefer remote
+    abstract IMAP check
+    description IMAP connect statistics
+}
+
+statistic {
+    statkey time
+    alias Response time
+    datatype float
+    units ms
+    description Time in milliseconds waiting for response.
+}
+
+chart {
+    id 1
+    title IMAP connect - response time
+    options {
+        ylabel time in ms
+        units null
+        chart-type area
+        series {
+            name time
+            color \#005467
+        }
+    }
+}
+

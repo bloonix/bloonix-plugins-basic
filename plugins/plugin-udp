@@ -1,0 +1,12 @@
+plugin {
+    id 14
+    plugin UDP.Check
+    command check-udp
+    datatype statistic
+    category Network
+    netaccess yes
+    worldwide yes
+    prefer remote
+    abstract UDP check
+    description Check if a UDP server sends a response.
+}

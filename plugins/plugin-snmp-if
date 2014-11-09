@@ -1,0 +1,232 @@
+plugin {
+    id 12
+    plugin SNMP.Interface
+    command check-snmp-if
+    datatype statistic
+    category Network,SNMP
+    netaccess yes
+    prefer localhost
+    abstract Check snmp-if
+    description Check the interfaces of routers and switches.
+}
+
+statistic {
+    statkey admin_status
+    alias ifAdminStatus
+    datatype varchar(20)
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.7
+}
+
+statistic {
+    statkey oper_status
+    alias ifOperStatus
+    datatype varchar(20)
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.8
+}
+
+statistic {
+    statkey in_discards
+    alias ifInDiscards
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.13
+}
+
+statistic {
+    statkey in_errors
+    alias ifInErrors
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.14
+}
+
+statistic {
+    statkey out_discards
+    alias ifOutDiscards
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.19
+}
+
+statistic {
+    statkey out_errors
+    alias ifOutErrors
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.20
+}
+
+statistic {
+    statkey in_octets
+    alias ifInOctets
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.10, 1.3.6.1.2.1.31.1.1.1.6
+}
+
+statistic {
+    statkey in_ucast_pkts
+    alias ifInUcastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.11, 1.3.6.1.2.1.31.1.1.1.7
+}
+
+statistic {
+    statkey in_nucast_pkts
+    alias ifInNUcastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.12
+}
+
+statistic {
+    statkey out_octets
+    alias ifOutOctets
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.16, 1.3.6.1.2.1.31.1.1.1.10
+}
+
+statistic {
+    statkey out_ucast_pkts
+    alias ifOutUcastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.17, 1.3.6.1.2.1.31.1.1.1.11
+}
+
+statistic {
+    statkey out_nucast_pkts
+    alias ifOutNUcastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.2.2.1.18
+}
+
+statistic {
+    statkey in_broadcast_pkts
+    alias ifHCInBroadcastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.31.1.1.1.9
+}
+
+statistic {
+    statkey in_multicast_pkts
+    alias ifHCInMulticastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.31.1.1.1.8
+}
+
+statistic {
+    statkey out_multicast_pkts
+    alias ifHCOutMulticastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.31.1.1.1.12
+}
+
+statistic {
+    statkey out_broadcast_pkts
+    alias ifHCOutBroadcastPkts
+    datatype float
+    units bytes
+    description OID 1.3.6.1.2.1.31.1.1.1.13
+}
+
+chart {
+    id 1
+    title SNMP if - errors, discards
+    options {
+        ylabel packets in(+) / out(-)
+        units default
+        chart-type area
+        series {
+            name in_errors
+            color \#9a72ad
+        }
+        series {
+            name in_discards
+            color \#e9644a
+        }
+        series {
+            name out_errors
+            color \#ffb244
+            opposite true
+        }
+        series {
+            name out_discards
+            color \#2ba743
+            opposite true
+        }
+    }
+}
+
+chart {
+    id 2
+    title SNMP if - in/out octets
+    options {
+        ylabel octets
+        units bytes_to_bits
+        chart-type area
+        series {
+            name in_octets
+            color \#005467
+        }
+        series {
+            name out_octets
+            color \#ff7a0d
+            opposite true
+        }
+    }
+}
+
+chart {
+    id 3
+    title SNMP if - multicast, broadcast
+    options {
+        ylabel packets in(+) / out(-)
+        units default
+        chart-type area
+        series {
+            name in_ucast_pkts
+            color \#ffb244
+        }
+        series {
+            name in_nucast_pkts
+            color \#9a72ad
+        }
+        series {
+            name in_multicast_pkts
+            color \#005467
+        }
+        series {
+            name in_broadcast_pkts
+            color \#e9644a
+        }
+        series {
+            name out_ucast_pkts
+            color \#ffb244
+            opposite true
+        }
+        series {
+            name out_nucast_pkts
+            color \#9a72ad
+            opposite true
+        }
+        series {
+            name out_multicast_pkts
+            color \#005467
+            opposite true
+        }
+        series {
+            name out_broadcast_pkts
+            color \#e9644a
+            opposite true
+        }
+    }
+}

@@ -1,0 +1,77 @@
+plugin {
+    id 2
+    plugin Cluster.ServiceCheck
+    command check-cluster
+    datatype none
+    netaccess yes
+    prefer remote
+    category Cluster,System,Utilities
+    abstract Check cluster service
+    description Check the status of multiple services.
+}
+
+statistic {
+    statkey OK
+    datatype bigint
+    units null
+    description Number of services in status OK.
+}
+
+statistic {
+    statkey INFO
+    datatype bigint
+    units null
+    description Number of services in status INFO.
+}
+
+statistic {
+    statkey WARNING
+    datatype bigint
+    units null
+    description Number of services in status WARNING.
+}
+
+statistic {
+    statkey CRITICAL
+    datatype bigint
+    units null
+    description Number of services in status CRITICAL.
+}
+
+statistic {
+    statkey UNKNOWN
+    datatype bigint
+    units null
+    description Number of services in status UNKNOWN.
+}
+
+chart {
+    id 1
+    title Cluster status
+    options {
+        ylabel count status
+        units null
+        chart-type area
+        series {
+            name OK
+            color \#4b9768
+        }
+        series {
+            name INFO
+            color \#2f96b4
+        }
+        series {
+            name WARNING
+            color \#f89406
+        }
+        series {
+            name CRITICAL
+            color \#ca2146
+        }
+        series {
+            name UNKNOWN
+            color \#eb582a
+        }
+    }
+}
+

@@ -1,0 +1,547 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-imap - Plugin to check imap.
+
+=head1 SYNOPSIS
+
+    check-imap [ OPTIONS ]
+
+    check-imap --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.8");
+
+$plugin->example(
+    description => "A simple login check with username and password",
+    arguments => [
+        host => "127.0.0.1",
+        port => 993,
+        warning => 5,
+        critical => 10,
+        "use-ssl" => undef,
+        username => "bloonix",
+        password => "secret"
+    ]
+);
+
+$plugin->example(
+    description => "In combination with the SMTP check of Bloonix it's possible to check a complete send-and-receive workflow. If you configure a SMTP check to send a mail with the subject 'Bloonix test mail' then it's possible to pick this mails with the IMAP check.",
+    arguments => [
+        host => "127.0.0.1",
+        port => 993,
+        warning => 5,
+        critical => 10,
+        "use-ssl" => undef,
+        username => "bloonix",
+        password => "secret",
+        misses => 5,
+        search => "Bloonix test mail",
+        delete => undef
+    ]
+);
+
+$plugin->has_warning(default => 5);
+$plugin->has_critical(default => 8);
+$plugin->has_timeout(default => 10);
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(mandatory => 1);
+$plugin->has_bind;
+$plugin->has_use_ipv6;
+$plugin->has_use_ssl;
+$plugin->has_login_username;
+$plugin->has_login_password;
+$plugin->has_mailbox(default => "INBOX");
+
+$plugin->add_option(
+    name => "Search for mails",
+    option => "search",
+    value_type => "string",
+    value => "string",
+    regex => qr/^[a-zA-Z_0-9]+\z/,
+    description => [
+        "Search for the given string in the subject of each mail. If the",
+        "string was not found then the value of option 'misses' will be",
+        "increased. If the threshold of option 'misses' is exceded then",
+        "a critical status will be returned.",
+        "Allowed characters for the search string: a-zA-Z_0-9"
+    ]
+);
+
+$plugin->add_option(
+    name => "Misses",
+    option => "misses",
+    value_type => "string",
+    value => "number",
+    regex => qr/^[1-9]\d*\z/,
+    default => 10,
+    description => [
+        "Set the number of allowed misses until a critical status will be",
+        "returned if the given string that is set with options 'search'",
+        "was not found in the subject of any mail."
+    ]
+);
+
+$plugin->add_option(
+    name => "Delete found mails",
+    option => "delete",
+    description => [
+        "If this option is set then all mails will be deleted from the mailbox",
+        "BUT only if the subject of a mail contains the string that is set",
+        "with option 'search'."
+    ]
+);
+
+$plugin->add_option(
+    name => "Delete all mails",
+    option => "delete-all",
+    description => [
+        "If this option is set then all mails will be deleted from the mailbox",
+        "after the run."
+    ]
+);
+
+$plugin->add_option(
+    name => "Debug",
+    option => "debug",
+    description => "Turn on debugging. Just useful if you want to test something.",
+    command_line_only => 1
+);
+
+# --------------------------------------------------
+# Parse options from the command line
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+my $sockmod = undef;
+my $sockopt = "";
+my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
+
+if ($opt->{use_ssl}) {
+    $sockmod = "IO::Socket::SSL";
+
+    if (!$opt->{use_ipv6}) {
+        $sockopt = "'inet4'";
+    } else {
+    }
+} elsif ($opt->{use_ipv6}) {
+    $sockmod = "IO::Socket::INET6";
+} else {
+    $sockmod = "IO::Socket::INET";
+}
+
+if ($opt->{debug}) {
+    $|=1;
+}
+
+my $proto = $opt->{use_ssl} ? "IMAPS" : "IMAP";
+
+# --------------------------------------------------
+# Load the socket module
+# --------------------------------------------------
+
+eval "use $sockmod $sockopt";
+
+if ($@) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "$sockmod is not installed"
+    );
+}
+
+# --------------------------------------------------
+# Initiate the IMAP handler
+# --------------------------------------------------
+
+my $imap = Bloonix::IMAP->new(
+    host => $ipaddr,
+    port => $opt->{port},
+    bind => $opt->{bind},
+    sockmod => $sockmod,
+    mailbox => $opt->{mailbox},
+    user => $opt->{username},
+    password => $opt->{password},
+    delete => "yes",
+    debug => $opt->{debug},
+);
+
+# --------------------------------------------------
+# Let's run the check
+# --------------------------------------------------
+
+my ($timeout, $counter, $found);
+$plugin->runtime;
+$imap->log->debug("start");
+
+$plugin->eval(
+    timeout => $opt->{timeout},
+    action => "connection",
+    add_mtr => $ipaddr,
+    callback => sub {
+        $imap->log->debug("set timeout to $opt->{timeout}");
+        $imap->log->debug("connect to $ipaddr $opt->{port}");
+        $imap->connect;
+
+        if ($opt->{username} && $opt->{password}) {
+            $imap->login;
+            $imap->select("INBOX");
+
+            if ($opt->{search}) {
+                my $stat = $plugin->load_json;
+
+                if ($stat) {
+                    $counter = $stat->{counter};
+                }
+
+                if (!defined $counter || $counter !~ /^\d+\z/) {
+                    $counter = 0;
+                }
+
+                $imap->log->info("current counter is set to $counter");
+                my $messages = $imap->messages;
+                my $num_messages = scalar @$messages;
+
+                foreach my $id (@$messages) {
+                    my $body = $imap->message($id);
+                    my $data = $imap->parse_header($body);
+
+                    if (defined $data->{Subject} && $data->{Subject} =~ /$opt->{search}/) {
+                        $found = 1;
+
+                        if ($opt->{delete}) {
+                            $imap->delete($id);
+                        }
+
+                        next;
+                    }
+
+                    if ($opt->{delete_all}) {
+                        $imap->delete($id);
+                    }
+                }
+
+                if ($found) {
+                    $counter = 0;
+                } else {
+                    $counter += 1;
+                }
+
+                $imap->log->info("new counter is set to $counter");
+                $plugin->safe_json({ counter => $counter });
+
+                if ($counter > $opt->{misses}) {
+                    $plugin->exit(
+                        status => "CRITICAL",
+                        message => "$num_messages messages found in $opt->{mailbox}, no matches found [misses=$counter]",
+                        stats => { time => $plugin->runtime }
+                    );
+                }
+            }
+            $imap->logout;
+        }
+
+        $imap->disconnect;
+    }
+);
+
+my $time = $plugin->runtime;
+$imap->log->debug("time proceed to request: $time");
+
+my $status = "OK";
+my $message;
+
+if ($timeout) {
+    $message = "check imap on host $ipaddr port $opt->{port} timed out after ${time}s";
+} else {
+    $message = "check imap on host $ipaddr port $opt->{port}";
+}
+
+if ($opt->{critical} && $time >= $opt->{critical}) {
+    $status = "CRITICAL";
+    $plugin->add_mtr($ipaddr);
+} elsif ($opt->{warning} && $time >= $opt->{warning}) {
+    $status = "WARNING";
+}
+
+$plugin->exit(
+    status => $status,
+    message => $message,
+    stats => { time => $time },
+    set_tags => { timeout => $timeout }
+);
+
+# --------------------------------------------------
+# Package Bloonix::IMAP
+# --------------------------------------------------
+
+package Bloonix::IMAP;
+
+use strict;
+use warnings;
+use Log::Handler;
+
+sub new {
+    my $class = shift;
+    my $self  = bless { @_ }, $class;
+
+    $self->{log} = Log::Handler->new();
+
+    if ($self->{debug}) {
+        $self->log->add(
+            screen => {
+                maxlevel => "debug",
+                minlevel => "emerg",
+                log_to   => "STDERR",
+            }
+        );
+    }
+
+    return $self;
+}
+
+sub log {
+    my $self = shift;
+
+    if (@_) {
+        $self->{log} = shift;
+    }
+
+    return $self->{log};
+}
+
+sub uid {
+    my $self = shift;
+
+    if (@_) {
+        $self->{uid} = shift;
+    }
+
+    return $self->{uid};
+}
+
+sub connect {
+    my $self  = shift;
+
+    $self->log->info("connect to $self->{host}:$self->{port}");
+    $self->log->info("connect via $self->{sockmod}");
+
+    my %options = (
+        PeerAddr => $self->{host},
+        PeerPort => $self->{port},
+        Proto => "tcp"
+    );
+
+    if ($self->{bind}) {
+        $options{LocalAddr} = $self->{bind};
+    }
+
+    $self->{sock} = $self->{sockmod}->new(%options)
+        or $self->log->die(error => $!);
+
+    $self->log->debug("set autoflush to the socket");
+    $self->{sock}->autoflush(1);
+    $self->uid("blx".time);
+    $self->log->debug("set uid for imap communication to", $self->uid);
+}
+
+sub disconnect {
+    my $self = shift;
+    my $sock = $self->{sock};
+    $self->log->info("disconnect socket");
+    close($sock);
+}
+
+sub login {
+    my $self = shift;
+
+    my $sock = $self->{sock};
+    my $resp = <$sock>;
+
+    if ($resp !~ /\sOK\s/i) {
+        $self->log->die(error => $resp);
+    } else {
+        $self->log->info($resp);
+    }
+
+    $self->log->info("login to mail server as user $self->{user}");
+    $self->query("LOGIN $self->{user} $self->{password}\n")
+        or $self->log->die("unable to login with user $self->{user}");
+}
+
+sub select {
+    my ($self, $folder) = @_;
+    $self->log->info("select $folder");
+    $self->query("SELECT $folder")
+        or $self->log->die("unable to select $folder");
+    $self->query("CHECK")
+        or $self->log->die("error on imap command 'CHECK'");
+}
+
+sub logout {
+    my $self = shift;
+    $self->log->info("logout from mail server");
+    $self->query("EXPUNGE")
+        or $self->log->die("error on command 'EXPUNGE'");
+    $self->query("LOGOUT")
+        or $self->log->die("error on command 'LOGOUT'");
+    $self->disconnect;
+}
+
+sub messages {
+    my $self = shift;
+    my $sock = $self->{sock};
+    my ($resp, @messages);
+
+    $self->log->info("search for mails");
+    $resp = $self->query("SEARCH ALL")
+        or $self->log->die("error on command 'SEARCH ALL'");
+
+    foreach my $search (@$resp) {
+        if ($search =~ s/^\*\s+SEARCH\s+//) {
+            $search =~ s/[\r\n]*\z//;
+            push @messages, split /\s+/, $search;
+        }
+    }
+
+    $self->log->debug("got ids", @messages);
+    return wantarray ? @messages : \@messages;
+}
+
+sub header {
+    my ($self, $id) = @_;
+
+    $self->log->debug("fetch header for mail id $id");
+    my $header = $self->query("FETCH $id BODY[HEADER]")
+        or $self->log->die("unable to fetch header for id $id");
+
+    shift @$header; # shift the header
+    return $header;
+}
+
+sub body {
+    my ($self, $id) = @_;
+
+    my $text = $self->query("FETCH $id BODY[TEXT]")
+        or $self->log->die("unable to fetch body text for id $id");
+    shift @$text; # shift the header
+    pop @$text; # pop the footer
+
+    return $text;
+}
+
+sub message {
+    my ($self, $id) = @_;
+
+    my $text = $self->query("FETCH $id BODY[]")
+        or $self->log->die("unable to fetch body for id $id");
+    shift @$text; # shift the header
+
+    return $text;
+}
+
+sub parse_header {
+    my ($self, $header) = @_;
+    my (%header, $param, $value);
+
+    foreach my $line (@$header) {
+        $line =~ s/[\r\n]*\z//;
+        if ($line =~ /^\s+(.+)$/) {
+            $value .= " $1";
+        } elsif ($line =~ /^(.+?):\s*(.+)$/) {
+            $param = $1;
+            $value = $2;
+            if ($param && $value) {
+                if (exists $header{$param}) {
+                    if (ref($header{$param}) ne "ARRAY") {
+                        $header{$param} = [ $header{$param} ];
+                    }
+                    push @{$header{$param}}, $value;
+                } else {
+                    $header{$param} = $value;
+                }
+            }
+        }
+    }
+
+    return \%header;
+}
+
+sub query {
+    my ($self, $msg) = @_;
+    my $sock = $self->{sock};
+    my $uid  = $self->uid;
+    my @resp = ();
+
+    $self->log->debug(">>send: $uid $msg");
+
+    print $sock "$uid $msg\n"
+        or $self->log->die(error => "unable to write to sock - $!");
+
+    while (my $line = <$sock>) {
+        my $tline = $line;
+        $tline =~ s/[\r\n]*\z//;
+        $self->log->debug("<<recv: $tline");
+
+        if ($line =~ /^$uid\s+OK\s+/) {
+            last;
+        } elsif ($line =~ /^$uid\s+(BAD|NO)\s+/) {
+            $self->log->error(error => $tline);
+            return undef;
+        } else {
+            push @resp, $line;
+        }
+    }
+
+    if (@resp && $resp[$#resp] =~ /\)[\r\n]+\z/) {
+        pop @resp;
+    }
+
+    return \@resp;
+}
+
+sub delete {
+    my ($self, @ids) = @_;
+
+    if ($self->{delete} eq "no") {
+        return;
+    }
+
+    foreach my $id (@ids) {
+        $self->log->info("delete $id");
+        $self->query("STORE $id +FLAGS (\\Deleted)")
+            or $self->log->die("unable to delete id $id");
+    }
+}
+
+1;

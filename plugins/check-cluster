@@ -1,0 +1,147 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-cluster - A plugin to check multiple services.
+
+=head1 SYNOPSIS
+
+    check-cluster [ OPTIONS ]
+
+    check-cluster --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+# --------------------------------------------------
+# Plugin options
+# --------------------------------------------------
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->version("0.1");
+
+$plugin->add_option(
+    name => "Warning threshold",
+    option => "warning",
+    value => "number",
+    value_type => "number",
+    mandatory => 1,
+    description => "The maximum number of services that are allowed in status WARNING."
+);
+
+$plugin->add_option(
+    name => "Critical threshold",
+    option => "critical",
+    value => "number",
+    value_type => "number",
+    mandatory => 1,
+    description => "The maximum number of services that are allowed in status CRITICAL."
+);
+
+$plugin->add_option(
+    name => "Service",
+    option => "service",
+    value => "id:status",
+    value_type => "string",
+    mandatory => 1,
+    multiple => 1,
+    description => "The service id you want to check."
+);
+
+$plugin->example(
+    description => join(" ",
+        "Check the health of multiple HTTP frontends. If more than or exactly 2 services are in status WARNING then a WARNING status is triggered. If more than or exactly 3 services are in status CRITICAL then a CRITICAL status is triggered."
+    ),
+    arguments => [
+        warning => 2,
+        critical => 3,
+        service => "23",
+        service => "24",
+        service => "25",
+        service => "26"
+    ]
+);
+
+# --------------------------------------------------
+# Parse and check services
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+
+# --------------------------------------------------
+# Check status of all services
+# --------------------------------------------------
+
+my $service_status = {};
+
+my $stat = {
+    OK => 0,
+    INFO => 0,
+    WARNING => 0,
+    CRITICAL => 0,
+    UNKNOWN => 0
+};
+
+my $status = "OK";
+my @message;
+
+foreach my $service (@{$opt->{service}}) {
+    if ($service =~ /^(\d+):(OK|INFO|WARNING|CRITICAL|UNKNOWN)/) {
+        my ($id, $status) = ($1, $2);
+        push @{$service_status->{$status}}, $id;
+        $stat->{$status}++;
+    } else {
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "invalid service definition: $service"
+        );
+    }
+}
+
+foreach my $key (qw/OK INFO WARNING CRITICAL UNKNOWN/) {
+    if ($stat->{$key} > 0) {
+        push @message, join(" ",
+            $stat->{$key},
+            $stat->{$key} == 1 ? "service" : "services",
+            lc($key)
+        );
+    }
+}
+    
+if ($stat->{UNKNOWN}) {
+    $status = "UNKNOWN";
+} elsif ($opt->{critical} && scalar $stat->{CRITICAL} >= $opt->{critical}) {
+    $status = "CRITICAL";
+} elsif ($opt->{warning} && scalar $stat->{WARNING} >= $opt->{warning}) {
+    $status = "WARNING";
+}
+
+$plugin->exit(
+    status => $status,
+    message => join(", ", @message),
+    stats => $stat,
+    advanced_status => $service_status
+);
