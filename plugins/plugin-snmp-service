@@ -1,6 +1,6 @@
 plugin {
-    id 57
-    plugin SNMP.Service
+    id 67
+    plugin SNMP.ServiceCheck
     command check-snmp-service.pl
     datatype none
     category System,SNMP

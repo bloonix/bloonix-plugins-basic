@@ -1,5 +1,5 @@
 plugin {
-    id 53
+    id 63
     plugin SNMP.Disk
     command check-snmp-disk
     datatype statistic

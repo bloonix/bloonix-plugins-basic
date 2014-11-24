@@ -1,5 +1,5 @@
 plugin {
-    id 54
+    id 64
     plugin SNMP.Memory
     command check-snmp-mem
     datatype statistic

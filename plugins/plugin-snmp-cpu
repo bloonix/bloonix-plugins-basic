@@ -1,5 +1,5 @@
 plugin {
-    id 52
+    id 62
     plugin SNMP.CPU
     command check-snmp-cpu
     datatype statistic

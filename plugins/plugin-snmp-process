@@ -1,5 +1,5 @@
 plugin {
-    id 56
+    id 66
     plugin SNMP.ProcessCheck
     command check-snmp-process
     datatype none

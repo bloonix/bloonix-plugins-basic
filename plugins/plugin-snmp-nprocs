@@ -1,5 +1,5 @@
 plugin {
-    id 55
+    id 65
     plugin SNMP.NumberOfProcesses
     command check-snmp-nprocs
     datatype statistic
