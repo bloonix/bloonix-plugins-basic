@@ -1,0 +1,33 @@
+plugin {
+    id 55
+    plugin SNMP.NumberOfProcesses
+    command check-snmp-nprocs
+    datatype statistic
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract Process check
+    description Process statistics
+}
+
+statistic {
+    statkey count
+    alias Count
+    datatype bigint
+    description The number of processes on the system.
+}
+
+chart {
+    id 1
+    title Count processes
+    options {
+        ylabel count
+        units null
+        chart-type area
+        series {
+            name count
+            color \#005467
+        }
+    }
+}
+

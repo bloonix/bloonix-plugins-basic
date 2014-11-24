@@ -1,0 +1,11 @@
+plugin {
+    id 56
+    plugin SNMP.ProcessCheck
+    command check-snmp-process
+    datatype none
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract Process check
+    description Plugin to check a process over snmp.
+}

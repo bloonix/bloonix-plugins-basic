@@ -1,0 +1,34 @@
+plugin {
+    id 52
+    plugin SNMP.CPU
+    command check-snmp-cpu
+    datatype statistic
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract CPU check
+    description CPU statistics.
+}
+
+statistic {
+    statkey cpu
+    alias Total usage
+    datatype bigint
+    units percent
+    description The total usage of the cpu in percent.
+}
+
+chart {
+    id 1
+    title CPU usage
+    options {
+        ylabel cpu in ms
+        units null
+        chart-type area
+        series {
+            name cpu
+            color \#005467
+        }
+    }
+}
+

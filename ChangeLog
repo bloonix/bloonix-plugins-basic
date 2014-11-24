@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.22) released at 2014-XX-XX
+
+    * Basic SNMP plugins added.
+
 bloonix-plugins-basic (0.21) released at 2014-11-08
 
     * Fixed arguments warn-count and warning of check-logfile.

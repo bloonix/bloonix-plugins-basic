@@ -1,0 +1,209 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-snmp-disk - Plugin to check the disk usage over snmp.
+
+=head1 SYNOPSIS
+
+    check-snmp-disk [ OPTIONS ]
+
+    check-snmp-disk --help
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+my $plugin = Bloonix::Plugin->new(version => "0.3");
+
+$plugin->example(
+    description => "Example to check the free space of disk C in percent:",
+    arguments => [
+        host => "127.0.0.1",
+        port => 161,
+        community => "public",
+        warning => "10%",
+        critical => "5%"
+    ]
+);
+
+$plugin->example(
+    description => "Example to check the free space of disk C in mega bytes:",
+    arguments => [
+        host => "127.0.0.1",
+        port => 161,
+        community => "public",
+        warning => "2000MB",
+        critical => "1000MB"
+    ]
+);
+
+$plugin->add_option(
+    name => "Drive",
+    option => "disk",
+    value => "disk",
+    value_type => "string",
+    mandatory => 1,
+    regex => qr/^[^\s]+\z/,
+    description => "This is the disk you want to check. As example 'C' for disk C:."
+);
+
+$plugin->has_snmp;
+$plugin->has_debug;
+
+$plugin->has_threshold(
+    keys => [
+        { key => "usedper", unit => "percent" },
+        { key => "freeper", unit => "percent" },
+        { key => "used", unit => "bytes" },
+        { key => "free", unit => "bytes" }
+    ]
+);
+
+# --------------------------------------------------
+# Parse options
+# --------------------------------------------------
+
+my $opt = $plugin->parse_options;
+
+# --------------------------------------------------
+# SNMP connection
+# --------------------------------------------------
+
+my $snmp = $plugin->start_snmp_session;
+
+# --------------------------------------------------
+# Load statistics
+# --------------------------------------------------
+
+sub get_snmp_table {
+    my ($snmp, $oid) = @_;
+
+    my $response = $snmp->get_table($oid);
+
+    if (!defined $response) {
+        my $message = "ERROR: ". $snmp->error;
+        $snmp->close;
+        $plugin->exit(
+            status => "CRITICAL",
+            message => $message
+        );
+    }
+
+    return $response;
+}
+
+# oid_desc: 
+#   1.3.6.1.2.1.25.2.3.1.3.1: A:\
+#   1.3.6.1.2.1.25.2.3.1.3.2: "C:\\ Label:  Serial Number 8423b358"
+#   1.3.6.1.2.1.25.2.3.1.3.3: D:\
+#   1.3.6.1.2.1.25.2.3.1.3.4: Virtual Memory
+#   1.3.6.1.2.1.25.2.3.1.3.5: Physical Memory
+# oid_total: 
+#   1.3.6.1.2.1.25.2.3.1.5.1: 0
+#   1.3.6.1.2.1.25.2.3.1.5.2: 4168191
+#   1.3.6.1.2.1.25.2.3.1.5.3: 0
+#   1.3.6.1.2.1.25.2.3.1.5.4: 32760
+#   1.3.6.1.2.1.25.2.3.1.5.5: 16376
+# oid_unit: 
+#   1.3.6.1.2.1.25.2.3.1.4.1: 0
+#   1.3.6.1.2.1.25.2.3.1.4.2: 4096
+#   1.3.6.1.2.1.25.2.3.1.4.3: 0
+#   1.3.6.1.2.1.25.2.3.1.4.4: 65536
+#   1.3.6.1.2.1.25.2.3.1.4.5: 65536
+# oid_used: 
+#   1.3.6.1.2.1.25.2.3.1.6.1: 0
+#   1.3.6.1.2.1.25.2.3.1.6.2: 2174784
+#   1.3.6.1.2.1.25.2.3.1.6.3: 0
+#   1.3.6.1.2.1.25.2.3.1.6.4: 6304
+#   1.3.6.1.2.1.25.2.3.1.6.5: 4083
+
+my $oid_desc   = "1.3.6.1.2.1.25.2.3.1.3";
+my $oid_unit   = "1.3.6.1.2.1.25.2.3.1.4";
+my $oid_total  = "1.3.6.1.2.1.25.2.3.1.5";
+my $oid_used   = "1.3.6.1.2.1.25.2.3.1.6";
+my $disk_desc  = &get_snmp_table($snmp, $oid_desc);
+my $disk_unit  = &get_snmp_table($snmp, $oid_unit);
+my $disk_total = &get_snmp_table($snmp, $oid_total);
+my $disk_used  = &get_snmp_table($snmp, $oid_used);
+
+$snmp->close;
+my $stat = { };
+
+foreach my $oid (keys %$disk_desc) {
+    my ($id) = $oid =~ /(\d+)$/;
+    $disk_desc->{$oid} =~ s/^["']//;
+
+    if ($disk_desc->{$oid} =~ /^(.+):{0,1}/) {
+        my $disk = $1;
+
+        if ($opt->{debug}) {
+            print STDERR ">> found disk $disk\n";
+        }
+
+        if ($opt->{disk} ne $disk) {
+            next;
+        }
+
+        my $id_unit  = "$oid_unit.$id";
+        my $id_total = "$oid_total.$id";
+        my $id_used  = "$oid_used.$id";
+
+        $stat->{total} = $disk_total->{$id_total} * $disk_unit->{$id_unit};
+        $stat->{used}  = $disk_used->{$id_used} * $disk_unit->{$id_unit};
+        $stat->{free}  = $stat->{total} - $stat->{used};
+
+        if ($stat->{total}) {
+            $stat->{usedper} = sprintf("%.2f", 100 * $stat->{used} / $stat->{total});
+            $stat->{freeper} = sprintf("%.2f", 100 - $stat->{usedper});
+        } else {
+            $stat->{usedper} = "0.00";
+            $stat->{freeper} = "100.00";
+        }
+
+        last;
+    }
+}
+
+if (!$stat->{total}) {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "disk '$opt->{disk}' not found"
+    );
+}
+
+# --------------------------------------------------
+# Check warning and critical
+# --------------------------------------------------
+
+my $result = $plugin->check_thresholds(
+    stats => $stat,
+    upshot_keys => [qw(usedper freeper used free)]
+);
+
+$plugin->exit(
+    status => $result->{status},
+    message => "$opt->{disk}: - $result->{upshot}",
+    stats => $stat
+);

@@ -1,0 +1,112 @@
+plugin {
+    id 54
+    plugin SNMP.Memory
+    command check-snmp-mem
+    datatype statistic
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract Memory check
+    description Check the memory usage.
+}
+
+statistic {
+    statkey memtotal
+    alias Total memory
+    datatype bigint
+    units bytes
+    description Total size of memory in bytes.
+}
+
+statistic {
+    statkey memfree
+    alias Free
+    datatype bigint
+    units bytes
+    description Total size of free memory in bytes.
+}
+
+statistic {
+    statkey memused
+    alias Used
+    datatype bigint
+    units bytes
+    description Total size of real used memory in bytes.
+}
+
+statistic {
+    statkey memusedper
+    alias Used
+    datatype float
+    units percent
+    description Total size of used memory in percent.
+}
+
+statistic {
+    statkey swaptotal
+    alias Total swap
+    datatype bigint
+    units bytes
+    description Total size of swap space in bytes.
+}
+
+statistic {
+    statkey swapfree
+    alias Free
+    datatype bigint
+    units bytes
+    description Total size of swap space is free in bytes.
+}
+
+statistic {
+    statkey swapused
+    alias Used
+    datatype bigint
+    units bytes
+    description Total size of swap space is used is bytes.
+}
+
+statistic {
+    statkey swapusedper
+    alias Used
+    datatype float
+    units percent
+    description Total size of swap space is used in percent.
+}
+
+chart {
+    id 1
+    title Memory and swap usage in %
+    options {
+        ylabel percent %
+        units null
+        chart-type area
+        series {
+            name memusedper
+            color \#005467
+        }
+        series {
+            name swapusedper
+            color \#ff7a0d
+        }
+    }
+}
+
+chart {
+    id 2
+    title Memory usage
+    options {
+        ylabel bytes
+        units bytes
+        chart-type area
+        series {
+            name memused
+            color \#005467
+        }
+        series {
+            name memfree
+            color \#ff7a0d
+        }
+    }
+}
+

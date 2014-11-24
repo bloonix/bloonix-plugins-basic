@@ -1,0 +1,73 @@
+plugin {
+    id 53
+    plugin SNMP.Disk
+    command check-snmp-disk
+    datatype statistic
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract Diskusage check
+    description Check the usage of disks.
+}
+
+statistic {
+    statkey used
+    alias Used
+    datatype bigint
+    units kilobytes
+    description The used disk space in kilobytes.
+}
+
+statistic {
+    statkey disk
+    alias Disk name
+    datatype varchar(20)
+    description The disk name.
+}
+
+statistic {
+    statkey free
+    alias Free
+    datatype bigint
+    units kilobytes
+    description The free disk space in kilobytes.
+}
+
+statistic {
+    statkey usedper
+    alias Used
+    datatype float
+    units percent
+    description The used disk space in percent.
+}
+
+statistic {
+    statkey freeper
+    alias Free
+    datatype float
+    units percent
+    description The free disk space in percent.
+}
+
+statistic {
+    statkey total
+    alias Total
+    datatype bigint
+    units kilobytes
+    description The total size of the disk.
+}
+
+chart {
+    id 1
+    title Disk usage
+    options {
+        ylabel disk used in %
+        units null
+        chart-type area
+        series {
+            name usedper
+            color \#005467
+        }
+    }
+}
+
