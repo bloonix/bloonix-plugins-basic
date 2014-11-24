@@ -13,7 +13,13 @@
     check-nagios-wrapper
     check-pop3
     check-smtp
+    check-snmp-cpu
+    check-snmp-disk
     check-snmp-if
+    check-snmp-mem
+    check-snmp-nprocs
+    check-snmp-process
+    check-snmp-service
     check-tcp
     check-udp
 
