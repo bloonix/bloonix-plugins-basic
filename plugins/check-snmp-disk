@@ -38,22 +38,24 @@ use Bloonix::Plugin;
 my $plugin = Bloonix::Plugin->new(version => "0.3");
 
 $plugin->example(
-    description => "Example to check the free space of disk C in percent:",
+    description => "Example to check the free space of disk C: in percent:",
     arguments => [
         host => "127.0.0.1",
         port => 161,
         community => "public",
+        disk => "C:",
         warning => "10%",
         critical => "5%"
     ]
 );
 
 $plugin->example(
-    description => "Example to check the free space of disk C in mega bytes:",
+    description => "Example to check the free space of disk C: in mega bytes:",
     arguments => [
         host => "127.0.0.1",
         port => 161,
         community => "public",
+        disk => "C:",
         warning => "2000MB",
         critical => "1000MB"
     ]
@@ -66,7 +68,7 @@ $plugin->add_option(
     value_type => "string",
     mandatory => 1,
     regex => qr/^[^\s]+\z/,
-    description => "This is the disk you want to check. As example 'C' for disk C:."
+    description => "This is the disk you want to check. As example 'C:' or '/' for the root filesystem."
 );
 
 $plugin->has_snmp;
@@ -155,35 +157,41 @@ foreach my $oid (keys %$disk_desc) {
     my ($id) = $oid =~ /(\d+)$/;
     $disk_desc->{$oid} =~ s/^["']//;
 
-    if ($disk_desc->{$oid} =~ /^(.+):{0,1}/) {
-        my $disk = $1;
-
-        if ($opt->{debug}) {
-            print STDERR ">> found disk $disk\n";
-        }
-
-        if ($opt->{disk} ne $disk) {
-            next;
-        }
-
-        my $id_unit  = "$oid_unit.$id";
-        my $id_total = "$oid_total.$id";
-        my $id_used  = "$oid_used.$id";
-
-        $stat->{total} = $disk_total->{$id_total} * $disk_unit->{$id_unit};
-        $stat->{used}  = $disk_used->{$id_used} * $disk_unit->{$id_unit};
-        $stat->{free}  = $stat->{total} - $stat->{used};
-
-        if ($stat->{total}) {
-            $stat->{usedper} = sprintf("%.2f", 100 * $stat->{used} / $stat->{total});
-            $stat->{freeper} = sprintf("%.2f", 100 - $stat->{usedper});
-        } else {
-            $stat->{usedper} = "0.00";
-            $stat->{freeper} = "100.00";
-        }
-
-        last;
+    if ($opt->{debug}) {
+        print STDERR ">> found disk $disk_desc->{$oid}\n";
     }
+
+    my $disk;
+
+    if ($opt->{disk} =~ /:\z/) {
+        if ($disk_desc->{$oid} =~ /^(.+?:)/) {
+            $disk = uc($1);
+        }
+    } elsif ($disk_desc->{$oid} =~ /^(.+)/) {
+        $disk = $1;
+    }
+
+    if (!$disk || $opt->{disk} ne $disk) {
+        next;
+    }
+
+    my $id_unit  = "$oid_unit.$id";
+    my $id_total = "$oid_total.$id";
+    my $id_used  = "$oid_used.$id";
+
+    $stat->{total} = $disk_total->{$id_total} * $disk_unit->{$id_unit};
+    $stat->{used}  = $disk_used->{$id_used} * $disk_unit->{$id_unit};
+    $stat->{free}  = $stat->{total} - $stat->{used};
+
+    if ($stat->{total}) {
+        $stat->{usedper} = sprintf("%.2f", 100 * $stat->{used} / $stat->{total});
+        $stat->{freeper} = sprintf("%.2f", 100 - $stat->{usedper});
+    } else {
+        $stat->{usedper} = "0.00";
+        $stat->{freeper} = "100.00";
+    }
+
+    last;
 }
 
 if (!$stat->{total}) {
