@@ -212,6 +212,6 @@ my $result = $plugin->check_thresholds(
 
 $plugin->exit(
     status => $result->{status},
-    message => "$opt->{disk}: - $result->{upshot}",
+    message => "$opt->{disk} - $result->{upshot}",
     stats => $stat
 );
