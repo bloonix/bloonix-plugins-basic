@@ -62,7 +62,7 @@ $plugin->example(
 );
 
 $plugin->add_option(
-    name => "Drive",
+    name => "Drive/Disk",
     option => "disk",
     value => "disk",
     value_type => "string",
