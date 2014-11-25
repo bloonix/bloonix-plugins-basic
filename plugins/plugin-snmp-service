@@ -1,7 +1,7 @@
 plugin {
     id 67
     plugin SNMP.ServiceCheck
-    command check-snmp-service.pl
+    command check-snmp-service
     datatype none
     category System,SNMP
     netaccess yes
