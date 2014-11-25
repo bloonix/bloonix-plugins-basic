@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.22-1) unstable; urgency=low
+
+    * Basic SNMP plugins added.
+    * It's possible to set a interface name to --interfaces.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 25 Nov 2014 17:38:24 +0100
+
 bloonix-plugins-basic (0.21-1) unstable; urgency=low
 
     * Fixed arguments warn-count and warning of check-logfile.

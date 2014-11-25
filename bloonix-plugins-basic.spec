@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.21
+Version: 0.22
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Tue Nov 25 2014 Jonny Schulz <js@bloonix.de> - 0.22-1
+- Basic SNMP plugins added.
+- It's possible to set a interface name to --interfaces.
 * Sat Nov 08 2014 Jonny Schulz <js@bloonix.de> - 0.21-1
 - Fixed arguments warn-count and warning of check-logfile.
 - Fixed the search order for warnings and criticals of check-logfile.
