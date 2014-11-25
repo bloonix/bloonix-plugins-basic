@@ -1,4 +1,4 @@
-bloonix-plugins-basic (0.22) released at 2014-XX-XX
+bloonix-plugins-basic (0.22) released at 2014-11-25
 
     * Basic SNMP plugins added.
     * It's possible to set a interface name to --interfaces.
