@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.23) released at 2014-12-02
+
+    * New plugin check-snmp.
+
 bloonix-plugins-basic (0.22) released at 2014-11-25
 
     * Basic SNMP plugins added.
