@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.24-1) unstable; urgency=low
+
+    * Improved check-snmp-mem for linux base systems.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 02 Dec 2014 20:17:04 +0100
+
 bloonix-plugins-basic (0.23-1) unstable; urgency=low
 
     * New plugin check-snmp.

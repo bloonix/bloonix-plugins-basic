@@ -42,7 +42,11 @@ use Bloonix::Plugin;
 my $plugin = Bloonix::Plugin->new(version => "0.3");
 
 $plugin->example(
-    description => "A simple example to check the memory usage and trigger a warning if the usage is higher than 90% or trigger a critical if the usage is higher than 95%:",
+    description => join(" ",
+        "A simple example to check the memory usage and trigger a warning",
+        "if the usage is higher than 90% or trigger a critical if the usage",
+        "is higher than 95%:"
+    ),
     arguments => [
         warning => "memusedper:ge:90",
         critical => "memusedper:ge:95"
@@ -72,137 +76,191 @@ $plugin->has_threshold(
 my $opt = $plugin->parse_options;
 
 # --------------------------------------------------
-# SNMP connection
+# Functions
 # --------------------------------------------------
 
-my $snmp = $plugin->start_snmp_session;
-
-# --------------------------------------------------
-# Load statistics
-# --------------------------------------------------
-
-sub get_snmp_table {
-    my ($snmp, $oid) = @_;
-
-    my $response = $snmp->get_table($oid);
-
-    if (!defined $response) {
-        my $message = "ERROR: ". $snmp->error;
-        $snmp->close;
-        $plugin->exit(
-            status => "UNKNOWN",
-            message => $message
-        );
-    }
-
-    return $response;
-}
-
-my $oid_desc  = "1.3.6.1.2.1.25.2.3.1.3";
-my $oid_unit  = "1.3.6.1.2.1.25.2.3.1.4";
-my $oid_total = "1.3.6.1.2.1.25.2.3.1.5";
-my $oid_used  = "1.3.6.1.2.1.25.2.3.1.6";
-
-my $mem_desc  = &get_snmp_table($snmp, $oid_desc);
-my $mem_unit  = &get_snmp_table($snmp, $oid_unit);
-my $mem_total = &get_snmp_table($snmp, $oid_total);
-my $mem_used  = &get_snmp_table($snmp, $oid_used);
-
-$snmp->close;
-
-my $stat = {};
-my $mem = {};
-my $search = {
-    phy => qr/(?:Physical\s+Memory|Real\s+Memory)/i,
-    swap => qr/Swap\s+Space/i,
-    virt => qr/Virtual\s+Memory/i,
-    buff => qr/Memory\s+buffers/i,
-    cache => qr/Cached\s+Memory/i
-};
-
-# Windows example:
-#
-# oid_desc: 
-#   1.3.6.1.2.1.25.2.3.1.3.1: A:\
-#   1.3.6.1.2.1.25.2.3.1.3.2: "C:\\ Label:  Serial Number 8423b358"
-#   1.3.6.1.2.1.25.2.3.1.3.3: D:\
-#   1.3.6.1.2.1.25.2.3.1.3.4: Virtual Memory
-#   1.3.6.1.2.1.25.2.3.1.3.5: Physical Memory
-# oid_total: 
-#   1.3.6.1.2.1.25.2.3.1.5.1: 0
-#   1.3.6.1.2.1.25.2.3.1.5.2: 4168191
-#   1.3.6.1.2.1.25.2.3.1.5.3: 0
-#   1.3.6.1.2.1.25.2.3.1.5.4: 32760
-#   1.3.6.1.2.1.25.2.3.1.5.5: 16376
-# oid_unit: 
-#   1.3.6.1.2.1.25.2.3.1.4.1: 0
-#   1.3.6.1.2.1.25.2.3.1.4.2: 4096
-#   1.3.6.1.2.1.25.2.3.1.4.3: 0
-#   1.3.6.1.2.1.25.2.3.1.4.4: 65536
-#   1.3.6.1.2.1.25.2.3.1.4.5: 65536
-# oid_used: 
-#   1.3.6.1.2.1.25.2.3.1.6.1: 0
-#   1.3.6.1.2.1.25.2.3.1.6.2: 2174784
-#   1.3.6.1.2.1.25.2.3.1.6.3: 0
-#   1.3.6.1.2.1.25.2.3.1.6.4: 6304
-#   1.3.6.1.2.1.25.2.3.1.6.5: 4083
-
-# Linux example:
-#
-# 1.3.6.1.2.1.25.2.3.1.3.3: Virtual memory
-# 1.3.6.1.2.1.25.2.3.1.3.10: Swap space
-# 1.3.6.1.2.1.25.2.3.1.3.8: Shared memory
-# 1.3.6.1.2.1.25.2.3.1.3.6: Memory buffers
-# 1.3.6.1.2.1.25.2.3.1.3.1: Physical memory
-# 1.3.6.1.2.1.25.2.3.1.3.33: /boot
-# 1.3.6.1.2.1.25.2.3.1.3.32: /
-# 1.3.6.1.2.1.25.2.3.1.3.7: Cached memory
-# 1.3.6.1.2.1.25.2.3.1.3.31: /dev
-
-foreach my $oid (keys %$mem_desc) {
-    my ($id) = $oid =~ /(\d+)$/;
-
+sub dump {
+    my ($type, $data, $opt) = @_;
     if ($opt->{debug}) {
-        print STDERR ">> $oid: $mem_desc->{$oid}\n";
-    }
-
-    foreach my $key (keys %$search) {
-        if ($mem_desc->{$oid} =~ $search->{$key}) {
-            $mem->{"${key}_unit"} = join(".", $oid_unit, $id);
-            $mem->{"${key}_total"} = join(".", $oid_total, $id);
-            $mem->{"${key}_used"} = join(".", $oid_used, $id);
+        print STDERR ">> $type\n";
+        foreach my $oid (keys %$data) {
+            print STDERR ">> $oid: $data->{$oid}\n";
         }
     }
 }
 
-if ($mem->{swap_unit}) {
-    $mem->{virt_unit}  = $mem->{swap_unit};
-    $mem->{virt_total} = $mem->{swap_total};
-    $mem->{virt_used}  = $mem->{swap_used};
+sub get_linux_mem_usage {
+    my $mem_linux_base = shift;
+
+    my $oid_linux_mem_total = "1.3.6.1.4.1.2021.4.5.0";
+    my $oid_linux_mem_free = "1.3.6.1.4.1.2021.4.6.0";
+    my $oid_linux_swap_total = "1.3.6.1.4.1.2021.4.3.0";
+    my $oid_linux_swap_free = "1.3.6.1.4.1.2021.4.4.0";
+    my $oid_linux_buffers = "1.3.6.1.4.1.2021.4.14.0";
+    my $oid_linux_cached = "1.3.6.1.4.1.2021.4.15.0";
+
+    my $mem = {
+        memtotal => $mem_linux_base->{$oid_linux_mem_total},
+        memfree => $mem_linux_base->{$oid_linux_mem_free},
+        buffers => $mem_linux_base->{$oid_linux_buffers},
+        cached => $mem_linux_base->{$oid_linux_cached},
+        swaptotal => $mem_linux_base->{$oid_linux_swap_total},
+        swapused => $mem_linux_base->{$oid_linux_swap_total} - $mem_linux_base->{$oid_linux_swap_free},
+        swapfree => $mem_linux_base->{$oid_linux_swap_free}
+    };
+
+    $mem->{memused} = $mem->{memtotal}
+         - $mem->{memfree}
+         - $mem->{buffers}
+         - $mem->{cached};
+
+    $mem->{memusedper} = sprintf("%.2f", 100 * $mem->{memused} / $mem->{memtotal});
+
+    if ($mem->{swaptotal}) {
+        $mem->{swapusedper} = sprintf("%.2f", 100 * $mem->{swapused} / $mem->{swaptotal});
+    } else {
+        $mem->{swapusedper} = sprintf("%.2f", 0);
+    }
+
+    return $mem;
 }
 
-# memory
-$stat->{memtotal} = $mem_total->{$mem->{phy_total}} * $mem_unit->{$mem->{phy_unit}};
-$stat->{memused} = $mem_used->{$mem->{phy_used}} * $mem_unit->{$mem->{phy_unit}};
+sub get_base_mem_usage {
+    my $mem_base = shift;
+    my $mem = {};
+    my $stat = {};
 
-if ($mem->{buff_unit}) {
-    $stat->{buffers} = $mem_used->{$mem->{buff_used}} * $mem_unit->{$mem->{buff_unit}};
-    $stat->{cached} = $mem_used->{$mem->{cache_used}} * $mem_unit->{$mem->{cache_unit}};
-    $stat->{memused} -= $stat->{buffers};
-    $stat->{memused} -= $stat->{cached};
+    my $oid_desc  = "1.3.6.1.2.1.25.2.3.1.3";
+    my $oid_unit  = "1.3.6.1.2.1.25.2.3.1.4";
+    my $oid_total = "1.3.6.1.2.1.25.2.3.1.5";
+    my $oid_used  = "1.3.6.1.2.1.25.2.3.1.6";
+
+    my $search = {
+        mem => qr/(?:Physical\s+Memory|Real\s+Memory)/i,
+        swap => qr/Swap\s+Space/i,
+        virt => qr/Virtual\s+Memory/i,
+        buff => qr/Memory\s+buffers/i,
+        cache => qr/Cached\s+Memory/i
+    };
+
+    # Windows example:
+    #
+    # oid_desc:
+    #   1.3.6.1.2.1.25.2.3.1.3.1: A:\
+    #   1.3.6.1.2.1.25.2.3.1.3.2: "C:\\ Label:  Serial Number 8423b358"
+    #   1.3.6.1.2.1.25.2.3.1.3.3: D:\
+    #   1.3.6.1.2.1.25.2.3.1.3.4: Virtual Memory
+    #   1.3.6.1.2.1.25.2.3.1.3.5: Physical Memory
+    # oid_total:
+    #   1.3.6.1.2.1.25.2.3.1.5.1: 0
+    #   1.3.6.1.2.1.25.2.3.1.5.2: 4168191
+    #   1.3.6.1.2.1.25.2.3.1.5.3: 0
+    #   1.3.6.1.2.1.25.2.3.1.5.4: 32760
+    #   1.3.6.1.2.1.25.2.3.1.5.5: 16376
+    # oid_unit:
+    #   1.3.6.1.2.1.25.2.3.1.4.1: 0
+    #   1.3.6.1.2.1.25.2.3.1.4.2: 4096
+    #   1.3.6.1.2.1.25.2.3.1.4.3: 0
+    #   1.3.6.1.2.1.25.2.3.1.4.4: 65536
+    #   1.3.6.1.2.1.25.2.3.1.4.5: 65536
+    # oid_used:
+    #   1.3.6.1.2.1.25.2.3.1.6.1: 0
+    #   1.3.6.1.2.1.25.2.3.1.6.2: 2174784
+    #   1.3.6.1.2.1.25.2.3.1.6.3: 0
+    #   1.3.6.1.2.1.25.2.3.1.6.4: 6304
+    #   1.3.6.1.2.1.25.2.3.1.6.5: 4083
+
+    # Linux example:
+    #
+    # 1.3.6.1.2.1.25.2.3.1.3.3: Virtual memory
+    # 1.3.6.1.2.1.25.2.3.1.3.10: Swap space
+    # 1.3.6.1.2.1.25.2.3.1.3.8: Shared memory
+    # 1.3.6.1.2.1.25.2.3.1.3.6: Memory buffers
+    # 1.3.6.1.2.1.25.2.3.1.3.1: Physical memory
+    # 1.3.6.1.2.1.25.2.3.1.3.33: /boot
+    # 1.3.6.1.2.1.25.2.3.1.3.32: /
+    # 1.3.6.1.2.1.25.2.3.1.3.7: Cached memory
+    # 1.3.6.1.2.1.25.2.3.1.3.31: /dev
+
+    foreach my $oid (keys %$mem_base) {
+        next unless $oid =~ /^\Q$oid_desc\E\.(\d+)\z/;
+        my $id = $1;
+
+        foreach my $key (keys %$search) {
+            if ($mem_base->{$oid} =~ $search->{$key}) {
+                $mem->{"${key}_unit"} = join(".", $oid_unit, $id);
+                $mem->{"${key}_total"} = join(".", $oid_total, $id);
+                $mem->{"${key}_used"} = join(".", $oid_used, $id);
+            }
+        }
+    }
+
+    if ($mem->{swap_unit}) {
+        $mem->{virt_unit}  = $mem->{swap_unit};
+        $mem->{virt_total} = $mem->{swap_total};
+        $mem->{virt_used}  = $mem->{swap_used};
+    }
+
+    # memory
+    $stat->{memtotal} = $mem_base->{$mem->{mem_total}} * $mem_base->{$mem->{mem_unit}};
+    $stat->{memused} = $mem_base->{$mem->{mem_used}} * $mem_base->{$mem->{mem_unit}};
+
+    if ($mem->{buff_unit}) {
+        if (!defined $stat->{cache_unit} || !defined $mem->{cache_used}) {
+            $stat->{cached} = 0;
+        } else {
+            $stat->{cached} = $mem_base->{$mem->{cache_used}} * $mem_base->{$mem->{cache_unit}};
+        }
+        $stat->{buffers} = $mem_base->{$mem->{buff_used}} * $mem_base->{$mem->{buff_unit}};
+        $stat->{memused} -= $stat->{buffers};
+        $stat->{memused} -= $stat->{cached};
+    } else {
+        $stat->{buffers} = 0;
+        $stat->{cached} = 0;
+    }
+
+    $stat->{memfree} = $stat->{memtotal} - $stat->{memused};
+    $stat->{memusedper} = sprintf("%.2f", 100 * $stat->{memused} / $stat->{memtotal});
+
+    # swap
+    $stat->{swaptotal} = $mem_base->{$mem->{virt_total}} * $mem_base->{$mem->{virt_unit}};
+    $stat->{swapused} = $mem_base->{$mem->{virt_used}} * $mem_base->{$mem->{virt_unit}};
+    $stat->{swapfree} = $stat->{swaptotal} - $stat->{swapused};
+
+    if ($stat->{swaptotal}) {
+        $stat->{swapusedper} = sprintf("%.2f", 100 * $stat->{swapused} / $stat->{swaptotal});
+    } else {
+        $stat->{swapusedper} = sprintf("%.2f", 0);
+    }
+
+    return $stat;
+}
+
+# --------------------------------------------------
+# SNMP connection and get statistics
+# --------------------------------------------------
+
+my $oid_linux_base = "1.3.6.1.4.1.2021.4";
+my $oid_base = "1.3.6.1.2.1.25.2.3.1";
+my $snmp = $plugin->start_snmp_session;
+my $mem_linux_base = $snmp->get_table($oid_linux_base);
+my $mem_base = $snmp->get_table($oid_base);
+$snmp->close;
+
+my $stat;
+
+if ($mem_linux_base && ref $mem_linux_base eq "HASH" && $mem_linux_base->{"1.3.6.1.4.1.2021.4.5.0"}) {
+    &dump(linux => $mem_linux_base => $opt);
+    $stat = &get_linux_mem_usage($mem_linux_base);
+} elsif ($mem_base && scalar keys %$mem_base) {
+    &dump(base => $mem_base => $opt);
+    $stat = &get_base_mem_usage($mem_base);
 } else {
-    $stat->{buffers} = 0;
-    $stat->{cached} = 0;
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "ERROR: ". $snmp->error
+    );
 }
-
-$stat->{memfree} = $stat->{memtotal} - $stat->{memused};
-$stat->{memusedper} = sprintf("%.2f", 100 * $stat->{memused} / $stat->{memtotal});
-
-# swap
-$stat->{swaptotal} = $mem_total->{$mem->{virt_total}} * $mem_unit->{$mem->{virt_unit}};
-$stat->{swapused} = $mem_used->{$mem->{virt_used}} * $mem_unit->{$mem->{virt_unit}};
-$stat->{swapfree} = $stat->{swaptotal} - $stat->{swapused};
-$stat->{swapusedper} = sprintf("%.2f", 100 * $stat->{swapused} / $stat->{swaptotal});
 
 # --------------------------------------------------
 # Check warning and critical
