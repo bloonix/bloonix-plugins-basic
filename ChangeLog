@@ -1,3 +1,8 @@
+bloonix-plugins-basic (0.25) released at 2014-12-03 
+
+    * Fixed missing key *nucast* for older linux systems
+      of plugin check-snmp-if.
+
 bloonix-plugins-basic (0.24) released at 2014-12-02
 
     * Improved check-snmp-mem for linux base systems.
