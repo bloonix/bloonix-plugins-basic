@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.25-1) unstable; urgency=low
+
+    * Fixed missing key *nucast* for older linux systems
+      of plugin check-snmp-if.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 03 Dec 2014 14:16:46 +0100
+
 bloonix-plugins-basic (0.24-1) unstable; urgency=low
 
     * Improved check-snmp-mem for linux base systems.

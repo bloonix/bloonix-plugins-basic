@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.24
+Version: 0.25
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Wed Dec 03 2014 Jonny Schulz <js@bloonix.de> - 0.25-1
+- Fixed missing key *nucast* for older linux systems
+  of plugin check-snmp-if.
 * Tue Dec 02 2014 Jonny Schulz <js@bloonix.de> - 0.24-1
 - Improved check-snmp-mem for linux base systems.
 * Tue Dec 02 2014 Jonny Schulz <js@bloonix.de> - 0.23-1
