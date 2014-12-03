@@ -279,7 +279,10 @@ my $stat = { };
 foreach my $key (keys %if_basics) {
     my $oid = $if_basics{$key};
     if (!exists $if_result->{"$oid.$if"}) {
-        die "oid $oid.$if does not exists";
+        $plugin->exit(
+            status => "UNKOWN",
+            message => "oid $oid.$if does not exists"
+        );
     }
     $stat->{$key} = $if_result->{"$oid.$if"};
 }
