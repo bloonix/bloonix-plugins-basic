@@ -1,0 +1,11 @@
+plugin {
+    id 68
+    plugin SNMP.Check
+    command check-snmp
+    datatype none
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract SNMP oid check
+    description Check the string of an OID.
+}

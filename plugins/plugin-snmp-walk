@@ -1,0 +1,11 @@
+plugin {
+    id 69
+    plugin SNMP.Walk.Check
+    command check-snmp-walk
+    datatype none
+    category System,SNMP
+    netaccess yes
+    prefer localhost
+    abstract SNMP oid check
+    description Search for a string in a SNMP table.
+}
