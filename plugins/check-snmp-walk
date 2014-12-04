@@ -65,12 +65,12 @@ $plugin->add_option(
 );
 
 $plugin->add_option(
-    name => "Search for a string with a regular expression in the snmp table.",
+    name => "Search for a string in the snmp table",
     option => "match",
     value => "regex",
     value_type => "string",
     mandatory => 1,
-    description => "A text string that is expected in the SNMP response for the OID table that is checked."
+    description => "A text string that is expected in the SNMP response for the SNMP table that is checked. The string can be a perl regular expression."
 );
 
 # --------------------------------------------------
