@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.27) released at 2014-12-18
+
+    * Replaced check-nagios-wrapper with check-simple-wrapper.
+
 bloonix-plugins-basic (0.26) released at 2014-12-04
 
     * New plugin check-snmp-walk.

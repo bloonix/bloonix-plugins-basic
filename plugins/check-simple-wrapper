@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-check-nagios-wrapper - Just for internal usage!
+check-simple-wrapper - Just for internal usage!
 
 =head1 REPORTING BUGS
 
@@ -30,24 +30,24 @@ use warnings;
 use Bloonix::Plugin;
 
 my $plugin = Bloonix::Plugin->new();
-$plugin->version("0.1");
-$plugin->flags("nagios");
+$plugin->version("0.2");
+$plugin->flags("simple");
 
 $plugin->example(
-    description => "Using nagios checks is very simple. Just enter the full command:",
+    description => "Using simple checks is very simple. Just enter the full command:",
     arguments => [
-        "nagios-command" => "check_this_or_that -H 127.0.0.1 -w 4 -c 5"
+        "simple-command" => "check_this_or_that -H 127.0.0.1 -w 4 -c 5"
     ]
 );
 
 $plugin->add_option(
-    name => "Nagios command",
-    option => "nagios-command",
+    name => "Command",
+    option => "simple-command",
     value_type => "string",
     value => "string",
     mandatory => 1,
     description => [
-        "Enter the complete nagios command with arguments but without",
+        "Enter the complete command with arguments but without",
         "the path to the script. Note that single quotes, backticks",
         "and backslashes are not allowed characters. Command example:",
         "check_this_or_that -H 127.0.0.1 -w 4 -c 5"
