@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2009 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -41,7 +41,7 @@ use Bloonix::Plugin;
 
 my $plugin = Bloonix::Plugin->new();
 
-$plugin->version("0.2");
+$plugin->version("0.3");
 
 $plugin->example(
     description => "A simple FTP login check",

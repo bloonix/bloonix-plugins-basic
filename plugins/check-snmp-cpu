@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -39,7 +39,7 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(version => "0.3");
+my $plugin = Bloonix::Plugin->new(version => "0.4");
 
 $plugin->example(
     description => "Example to check the CPU usage:",

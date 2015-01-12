@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2010-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2009 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -41,9 +41,7 @@ use Sys::Hostname qw();
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new();
-
-$plugin->version("0.8");
+my $plugin = Bloonix::Plugin->new(version => "0.9");
 
 $plugin->example(
     description => "Just a simple SMTP connection to your mail server:",

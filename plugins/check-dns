@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2013-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2013 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -38,7 +38,7 @@ use Net::DNS::Resolver;
 
 my $plugin = Bloonix::Plugin->new();
 
-$plugin->version("0.3");
+$plugin->version("0.4");
 
 $plugin->example(
     description => "In the following example a DNS request is send to the nameserver dns.example.test for the domain bloonix.de and the record type A. In the response of the DNS server the IP address 192.168.10.11 is expected. A CRITICAL status is triggered if the IP address is not present in the response.",

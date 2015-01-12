@@ -40,12 +40,14 @@ use Time::HiRes qw();
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new();
-
-$plugin->version("0.5");
+my $plugin = Bloonix::Plugin->new(version => "0.6");
 
 $plugin->example(
-    description => "The following example would send the string 'hello server' as UDP request to the server and expects the response 'hello client'. If the response does not match a critical status is triggered.",
+    description => join(" ",
+        "The following example would send the string 'hello server' as",
+        "UDP request to the server and expects the response 'hello client'.",
+        "If the response does not match a critical status is triggered."
+    ),
     arguments => [
         host => "udp.server.test",
         port => "5300",

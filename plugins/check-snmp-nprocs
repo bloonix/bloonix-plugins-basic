@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -39,10 +39,13 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(version => "0.3");
+my $plugin = Bloonix::Plugin->new(version => "0.4");
 
 $plugin->example(
-    description => "Return a warning state if more than 50 processes running or return a critical state if more than 100 processes are running:",
+    description => join(" ",
+        "Return a warning state if more than 50 processes running or return",
+        "a critical state if more than 100 processes are running:"
+    ),
     arguments => [
         host => "127.0.0.1",
         port => 161,

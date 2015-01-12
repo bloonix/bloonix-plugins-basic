@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2009 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -39,9 +39,7 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new();
-
-$plugin->version("0.6");
+my $plugin = Bloonix::Plugin->new(version => "0.7");
 
 $plugin->example(
     description => "The following example would send a HTTP request to the server and expects a HTTP status code of 200 in the reponse. Note that the string 'CRLF' is replaced with an empty line.",

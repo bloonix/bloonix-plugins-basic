@@ -27,7 +27,7 @@ Jonny Schulz <support(at)bloonix.de>.
 
 =head1 COPYRIGHT
 
-Copyright (C) 2009-2014 by Jonny Schulz. All rights reserved.
+Copyright (C) 2009 by Jonny Schulz. All rights reserved.
 
 =cut
 
@@ -39,9 +39,8 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new();
+my $plugin = Bloonix::Plugin->new(version => "0.8");
 
-$plugin->version("0.7");
 $plugin->has_warning(default => 3);
 $plugin->has_critical(default => 5);
 $plugin->has_timeout(default => 10);
