@@ -5,6 +5,7 @@ plugin {
     category Mail
     netaccess yes
     worldwide no
+    datatype none
     prefer remote
     abstract RBL check
     description Check if a IP or hostname is listed on a blacklist.
