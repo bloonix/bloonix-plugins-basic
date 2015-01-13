@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.28-1) unstable; urgency=low
+
+    * New plugin check-rbl.
+    * Changed the copyright year to the year of the first release.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 13 Jan 2015 11:21:47 +0100
+
 bloonix-plugins-basic (0.27-1) unstable; urgency=low
 
     * Replaced check-nagios-wrapper with check-simple-wrapper.

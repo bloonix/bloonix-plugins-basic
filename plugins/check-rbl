@@ -43,16 +43,21 @@ my $config_file = "/etc/bloonix/agent/check-rbl.conf";
 my $plugin = Bloonix::Plugin->new();
 
 $plugin->version("0.1");
+$plugin->flags("mid-check-frequency");
 
 $plugin->example(
     description => [
-        "Check a host or IP address if its listet on a blacklist.",
-        "",
-        "Configure the blacklist in /etc/bloonix/agent/check-rbl.conf on your server."
+        "Check if a host or IP address is listet on a blacklist.",
     ],
     arguments => [
         host => "mail.bloonix.de",
-        timeout => 3
+        server => "zen.spamhaus.org",
+        server => "ix.dnsbl.manitu.net",
+        server => "bl.spamcop.net",
+        server => "dul.dnsbl.sorbs.net",
+        server => "combined.njabl.org",
+        server => "fuldom.rfc-ignorant.org",
+        server => "blackholes.mail-abuse.org"
     ]
 );
 
@@ -63,7 +68,7 @@ $plugin->has_host(
 
 $plugin->has_timeout(
     default => 3,
-    description => "A timeout in seconds after a request to a blacklist will be aborted."
+    description => "A timeout in seconds after a DNS request will be aborted."
 );
 
 $plugin->add_option(
@@ -84,6 +89,16 @@ $plugin->add_option(
     description => "The the number of blacklisting servers to trigger a WARNING status."
 );
 
+$plugin->add_option(
+    name => "RBL server",
+    option => "server",
+    value => "server",
+    value_type => "string",
+    multiple => 1,
+    mandatory => 1,
+    description => "The RBL server to check. It's possible to configure multiple RBL servers."
+);
+
 $plugin->has_debug;
 
 my $opt = $plugin->parse_options;
@@ -94,18 +109,10 @@ my $opt = $plugin->parse_options;
 
 my $ip = $plugin->get_ip_by_hostname(ipv4 => $opt->{host});
 my $reverse_ip = join(".", reverse split /\./, $ip);
-
-open my $fh, "<", $config_file or $plugin->exit(
-    status => "UNKNOWN",
-    message => "unable to open file $config_file - $!"
-);
-
 my $checked = 0;
 my (@timeout, @listed);
-my @servers = <$fh>;
-chomp @servers;
 
-foreach my $server (@servers) {
+foreach my $server (@{$opt->{server}}) {
     if ($opt->{debug}) {
         print STDERR "check $reverse_ip.$server";
     }
@@ -115,6 +122,7 @@ foreach my $server (@servers) {
         $SIG{ALRM} = sub { die "timeout" };
         alarm($opt->{timeout});
         my ($name, $aliases, $addrtype, $length, @addrs) = gethostbyname($reverse_ip .".". $server);
+
         if ($name) {
             my @addr = unpack("C4", $addrs[0]);
             push @listed, "$server($addr[3])";
@@ -124,12 +132,13 @@ foreach my $server (@servers) {
         } elsif ($opt->{debug}) {
             print STDERR " (not listed)\n";
         }
+
         alarm(0);
     };
 
     my $err = $@;
 
-    if ($err) {
+    if ($err && $err !~ /^next server/) {
         if ($opt->{debug}) {
             print STDERR " (timed out)\n";
         } elsif ($err !~ /^timeout/) {
@@ -173,3 +182,45 @@ $plugin->exit(
     status => $status,
     message => $message
 );
+
+__DATA__
+bl.spamcop.net
+dnsbl.ahbl.org
+cbl.abuseat.org
+dnsbl.cyberlogic.net
+bl.deadbeef.com
+spamtrap.drbl.drand.net
+spamsources.fabel.dk
+0spam.fusionzero.com
+mail-abuse.blacklist.jippg.org
+korea.services.net
+spamguard.leadmon.net
+ix.dnsbl.manitu.net
+relays.nether.net
+no-more-funn.moensted.dk
+psbl.surriel.com
+dyna.spamrats.com
+noptr.spamrats.com
+spam.spamrats.com
+dnsbl.sorbs.net
+spam.dnsbl.sorbs.net
+bl.spamcannibal.org
+bl.spamcop.net
+pbl.spamhaus.org
+sbl.spamhaus.org
+xbl.spamhaus.org
+ubl.unsubscore.com
+dnsbl-1.uceprotect.net
+dnsbl-2.uceprotect.net
+dnsbl-3.uceprotect.net
+db.wpbl.info
+access.redhawk.org
+blacklist.sci.kun.nl
+bl.technovision.dk
+dnsbl.kempt.net
+dnsbl.solid.net
+dul.ru
+forbidden.icm.edu.pl
+hil.habeas.com
+rbl.schulte.org
+sbl-xbl.spamhaus.org

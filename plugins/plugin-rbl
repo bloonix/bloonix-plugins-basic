@@ -1,0 +1,11 @@
+plugin {
+    id 70
+    plugin RBL.Check
+    command check-rbl
+    category Mail
+    netaccess yes
+    worldwide no
+    prefer remote
+    abstract RBL check
+    description Check if a IP or hostname is listed on a blacklist.
+}
