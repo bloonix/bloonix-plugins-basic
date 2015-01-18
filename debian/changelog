@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.30-1) unstable; urgency=low
+
+    * Fixed check-http. Now parameter --resolve is used to force the
+      IP address of the host. curl >= 7.21.3 is necessary.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 18 Jan 2015 14:31:53 +0100
+
 bloonix-plugins-basic (0.29-1) unstable; urgency=low
 
     * Datatype fixed for plugin-rbl.
