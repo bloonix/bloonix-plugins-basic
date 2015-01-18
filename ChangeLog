@@ -1,3 +1,12 @@
+bloonix-plugins-basic (0.30) released at 2015-01-18
+
+    * Fixed check-http. Now parameter --resolve is used to force the
+      IP address of the host. curl >= 7.21.3 is necessary.
+
+bloonix-plugins-basic (0.29) released at 2015-01-13
+
+    * Datatype fixed for plugin-rbl.
+
 bloonix-plugins-basic (0.28) released at 2015-01-13
 
     * New plugin check-rbl.

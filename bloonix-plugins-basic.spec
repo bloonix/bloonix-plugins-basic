@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.28
+Version: 0.29
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Tue Jan 13 2015 Jonny Schulz <js@bloonix.de> - 0.29-1
+- Datatype fixed for plugin-rbl.
 * Tue Jan 13 2015 Jonny Schulz <js@bloonix.de> - 0.28-1
 - New plugin check-rbl.
 - Changed the copyright year to the year of the first release.

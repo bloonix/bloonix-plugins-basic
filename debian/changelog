@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.29-1) unstable; urgency=low
+
+    * Datatype fixed for plugin-rbl.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 13 Jan 2015 11:30:41 +0100
+
 bloonix-plugins-basic (0.28-1) unstable; urgency=low
 
     * New plugin check-rbl.

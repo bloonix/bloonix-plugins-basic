@@ -184,6 +184,13 @@ $plugin->add_option(
     command_line_only => 1
 );
 
+#$plugin->add_option(
+#    name => "Curl <7.21.3",
+#    option => "old-curl",
+#    description => "Use this option if an older version of curl (<7.21.3) is installed on your server.",
+#    command_line_only => 1
+#);
+
 # --------------------------------------------------
 # Post check
 # --------------------------------------------------
@@ -215,11 +222,13 @@ if ($opt->{certificate}) {
 # Protocol check
 # --------------------------------------------------
 
-my ($ipaddr, $proto, $host);
+my ($ipaddr, $proto, $host, $port);
 my $ipv = $opt->{use_ipv6} ? "ipv6" : "ipv4";
 
 if ($opt->{url} =~ m!^(https{0,1})://(.+?)(?:/|$)!) {
     ($proto, $host) = ($1, $2);
+    ($host, $port) = split /:/, $host;
+    $port ||= $proto eq "https" ? 443 : 80;
 } else {
     $plugin->exit(
         status => "UNKNOWN",
@@ -231,11 +240,13 @@ $host =~ s/:(\d+)\z//;
 $ipaddr = $plugin->get_ip_by_hostname($ipv, $opt->{host} || $host);
 $plugin->result->{debug}->{ipaddr} = $ipaddr;
 
-if ($opt->{use_ipv6}) {
-    $opt->{url} =~ s!^$proto://$host!$proto://[$ipaddr]!;
-} else {
-    $opt->{url} =~ s!^$proto://$host!$proto://$ipaddr!;
-}
+#if ($opt->{old_curl}) {
+#    if ($opt->{use_ipv6}) {
+#        $opt->{url} =~ s!^$proto://$host!$proto://[$ipaddr]!;
+#    } else {
+#        $opt->{url} =~ s!^$proto://$host!$proto://$ipaddr!;
+#    }
+#}
 
 $opt->{host} = $host;
 
@@ -258,15 +269,29 @@ eval {
 
     alarm($opt->{timeout} + 5);
 
-    my $curl = "curl '$opt->{url}' --max-time $opt->{timeout} --retry 0 --silent --show-error --include --verbose";
+    my $curl = join(" ",
+        "curl '$opt->{url}'",
+        #"--header 'Host: $host'",
+        "--max-time $opt->{timeout}",
+        "--retry 0",
+        "--silent",
+        "--show-error",
+        "--include",
+        "--verbose",
+        "--resolve '$host:$port:$ipaddr'"
+    );
+
+    #if (!$opt->{old_curl}) {
+    #    $curl .= " --resolve '$host:$port:$ipaddr'";
+    #}
 
     if ($opt->{user_agent}) {
         $curl .= " -A '$opt->{user_agent}'";
     }
 
-    if ($opt->{host}) {
-        $curl .= " --header 'Host: $opt->{host}'";
-    }
+    #if ($opt->{host}) {
+    #    $curl .= " --header 'Host: $opt->{host}'";
+    #}
 
     if ($opt->{use_ipv6}) {
         $curl .= " --ipv6 -g";
