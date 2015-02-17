@@ -89,13 +89,11 @@ $plugin->add_option(
     option => "search",
     value_type => "string",
     value => "string",
-    regex => qr/^[a-zA-Z_0-9]+\z/,
     description => [
         "Search for the given string in the subject of each mail. If the",
         "string was not found then the value of option 'misses' will be",
         "increased. If the threshold of option 'misses' is exceded then",
         "a critical status will be returned.",
-        "Allowed characters for the search string: a-zA-Z_0-9"
     ]
 );
 
