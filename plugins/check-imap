@@ -292,6 +292,10 @@ if ($opt->{critical} && $time >= $opt->{critical}) {
     $status = "WARNING";
 }
 
+if ($opt->{misses} && defined $counter) {
+    $message .= " ($counter/$opt->{misses})";
+}
+
 $plugin->exit(
     status => $status,
     message => $message,
