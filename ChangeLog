@@ -1,4 +1,4 @@
-bloonix-plugins-basic (0.31) released at 2015-02-17
+bloonix-plugins-basic (0.31) released at 2015-02-18
 
     * Allow complex search strings for plugin check-imap.
     * check-imap shows now a miss counter.

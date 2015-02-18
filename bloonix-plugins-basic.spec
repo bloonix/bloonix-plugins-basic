@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.30
+Version: 0.31
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Wed Feb 18 2015 Jonny Schulz <js@bloonix.de> - 0.31-1
+- Allow complex search strings for plugin check-imap.
+- check-imap shows now a miss counter.
 * Sun Jan 18 2015 Jonny Schulz <js@bloonix.de> - 0.30-1
 - Fixed check-http. Now parameter --resolve is used to force the
   IP address of the host. curl >= 7.21.3 is necessary.
