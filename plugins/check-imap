@@ -41,7 +41,7 @@ use Bloonix::Plugin;
 
 my $plugin = Bloonix::Plugin->new();
 
-$plugin->version("0.9");
+$plugin->version("0.10");
 
 $plugin->example(
     description => "A simple login check with username and password",
@@ -66,7 +66,7 @@ $plugin->example(
         "use-ssl" => undef,
         username => "bloonix",
         password => "secret",
-        misses => 5,
+        misses => "5m",
         search => "Bloonix test mail",
         delete => undef
     ]
@@ -90,24 +90,37 @@ $plugin->add_option(
     value_type => "string",
     value => "string",
     description => [
-        "Search for the given string in the subject of each mail. If the",
-        "string was not found then the value of option 'misses' will be",
-        "increased. If the threshold of option 'misses' is exceded then",
-        "a critical status will be returned.",
+        "Search for the given string in the subject of each mail.",
+        "In combination with the option 'Miss time' a critical",
+        "status is triggered if the mail weren't found in the",
+        "expected time."
     ]
 );
 
 $plugin->add_option(
-    name => "Misses",
+    name => "Miss time",
     option => "misses",
     value_type => "string",
-    value => "number",
-    regex => qr/^[1-9]\d*\z/,
-    default => 10,
+    value => "time",
+    regex => qr/^[1-9]\d*[mhd]{0,1}\z/,
+    default => "10m",
     description => [
-        "Set the number of allowed misses until a critical status will be",
-        "returned if the given string that is set with options 'search'",
-        "was not found in the subject of any mail."
+        "With this option you can set a expire time. The units are 'm'",
+        "for minutes, 'h' for hours and 'd' for days. In combination with the",
+        "option 'Search for mails' a critical status is triggered if a mail",
+        "weren't found in the expected time. Note that if no unit is used",
+        "then this option acts like a counter. That means that a internal",
+        "counter is increased with each check if a mail weren't found.",
+        "After X misses a critical status is triggered."
+    ]
+);
+
+$plugin->add_option(
+    name => "Return CRITICAL, not OK",
+    option => "invert-regex",
+    description => [
+        "Use this option if you want that a CRITICAL status is triggered if a mail is found.",
+        "If this option is enabled then the option 'misses' will be ignored."
     ]
 );
 
@@ -142,9 +155,21 @@ $plugin->add_option(
 # --------------------------------------------------
 
 my $opt = $plugin->parse_options;
+my $misses_unit = "c";
 my $sockmod = undef;
 my $sockopt = "";
 my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
+
+if ($opt->{misses} && $opt->{misses} =~ s/([mhd])//) {
+    $misses_unit = $1;
+    if ($misses_unit eq "m") {
+        $opt->{misses} *= 60;
+    } elsif ($misses_unit eq "h") {
+        $opt->{misses} *= 3600;
+    } elsif ($misses_unit eq "d") {
+        $opt->{misses} *= 86400;
+    }
+}
 
 if ($opt->{use_ssl}) {
     $sockmod = "IO::Socket::SSL";
@@ -198,7 +223,9 @@ my $imap = Bloonix::IMAP->new(
 # Let's run the check
 # --------------------------------------------------
 
-my ($timeout, $counter, $found);
+my ($timeout, $counter, $last_match, $last_match_ago);
+my $hits = 0;
+my $time = time;
 $plugin->runtime;
 $imap->log->debug("start");
 
@@ -220,10 +247,15 @@ $plugin->eval(
 
                 if ($stat) {
                     $counter = $stat->{counter};
+                    $last_match = $stat->{last_match};
                 }
 
                 if (!defined $counter || $counter !~ /^\d+\z/) {
                     $counter = 0;
+                }
+
+                if (!defined $last_match || $last_match !~ /^\d+\z/) {
+                    $last_match = $time;
                 }
 
                 $imap->log->info("current counter is set to $counter");
@@ -235,7 +267,7 @@ $plugin->eval(
                     my $data = $imap->parse_header($body);
 
                     if (defined $data->{Subject} && $data->{Subject} =~ /$opt->{search}/) {
-                        $found = 1;
+                        $hits++;
 
                         if ($opt->{delete}) {
                             $imap->delete($id);
@@ -249,21 +281,51 @@ $plugin->eval(
                     }
                 }
 
-                if ($found) {
+                if ($hits) {
+                    if ($opt->{invert_regex}) {
+                        $plugin->exit(
+                            status => "CRITICAL",
+                            message => "$hits messages found in $opt->{mailbox}",
+                            stats => { time => $plugin->runtime }
+                        );
+                    }
                     $counter = 0;
+                    $last_match = $time;
                 } else {
                     $counter += 1;
                 }
 
                 $imap->log->info("new counter is set to $counter");
-                $plugin->safe_json({ counter => $counter });
+                $plugin->safe_json({ counter => $counter, last_match => $last_match });
 
-                if ($counter > $opt->{misses}) {
-                    $plugin->exit(
-                        status => "CRITICAL",
-                        message => "$num_messages messages found in $opt->{mailbox}, no matches found [misses=$counter]",
-                        stats => { time => $plugin->runtime }
-                    );
+                if ($time - $last_match < 60) {
+                    $last_match_ago = "now";
+                } else {
+                    my ($s, $m, $h, $d) = ($time - $last_match, 0, 0, 0);
+                    $s >= 86400 and $d = sprintf('%i', $s / 86400) and $s = $s % 86400;
+                    $s >= 3600  and $h = sprintf('%i', $s / 3600)  and $s = $s % 3600;
+                    $s >= 60    and $m = sprintf('%i', $s / 60)    and $s = $s % 60;
+                    $last_match_ago = $d > 0
+                        ? "${d}d ${h}h ${m}m"
+                        : $h > 0
+                            ? "${h}h ${m}m"
+                            : "${m}m";
+                }
+
+                if (!$opt->{invert_regex}) {
+                    if ($misses_unit eq "c" && $counter > $opt->{misses}) {
+                        $plugin->exit(
+                            status => "CRITICAL",
+                            message => "$num_messages messages in $opt->{mailbox}, no hits [misses=$counter]",
+                            stats => { time => $plugin->runtime }
+                        );
+                    } elsif ($misses_unit ne "c" && $last_match + $opt->{misses} < $time) {
+                        $plugin->exit(
+                            status => "CRITICAL",
+                            message => "$num_messages messages in $opt->{mailbox}, last match ago: $last_match_ago",
+                            stats => { time => $plugin->runtime }
+                        );
+                    }
                 }
             }
             $imap->logout;
@@ -273,8 +335,8 @@ $plugin->eval(
     }
 );
 
-my $time = $plugin->runtime;
-$imap->log->debug("time proceed to request: $time");
+my $runtime = $plugin->runtime;
+$imap->log->debug("time proceed to request: $runtime");
 
 my $status = "OK";
 my $message;
@@ -285,21 +347,25 @@ if ($timeout) {
     $message = "check imap on host $ipaddr port $opt->{port}";
 }
 
-if ($opt->{critical} && $time >= $opt->{critical}) {
+if ($opt->{critical} && $runtime >= $opt->{critical}) {
     $status = "CRITICAL";
     $plugin->add_mtr($ipaddr);
-} elsif ($opt->{warning} && $time >= $opt->{warning}) {
+} elsif ($opt->{warning} && $runtime >= $opt->{warning}) {
     $status = "WARNING";
 }
 
-if ($opt->{misses} && defined $counter) {
+if ($opt->{invert_regex}) {
+    $message .= " (no hits)";
+} elsif ($misses_unit ne "c") {
+    $message .= ", last match ago: $last_match_ago";
+} elsif ($opt->{misses} && defined $counter) {
     $message .= " ($counter/$opt->{misses})";
 }
 
 $plugin->exit(
     status => $status,
     message => $message,
-    stats => { time => $time },
+    stats => { time => $runtime },
     set_tags => { timeout => $timeout }
 );
 

@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.31
+Version: 0.32
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Fri Feb 20 2015 Jonny Schulz <js@bloonix.de> - 0.32-1
+- Modified option 'misses' of check-imap. It's now possible
+  to use a expire time (1m, 5h, 3d) instead a counter.
 * Wed Feb 18 2015 Jonny Schulz <js@bloonix.de> - 0.31-1
 - Allow complex search strings for plugin check-imap.
 - check-imap shows now a miss counter.

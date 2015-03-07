@@ -39,7 +39,7 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(version => "0.2");
+my $plugin = Bloonix::Plugin->new(version => "0.3");
 
 $plugin->example(
     description => "Example to check if a VPN connection exists on a Cisco ASA firewall:",
@@ -106,24 +106,25 @@ $snmp->close;
 # Check warning and critical
 # --------------------------------------------------
 
-my $status = "OK";
-my $value = "string '$opt->{match}' not found";
+my $found;
 
 foreach my $oid (keys %$response) {
     next unless defined $response->{$oid};
 
     if ($opt->{match} && $response->{$oid} =~ /$opt->{match}/) {
-        $value = $response->{$oid};
+        $found = $response->{$oid};
         last;
     }
 }
 
-if (!$value) {
-    $status = "CRITICAL";
+if (!$found) {
+    $plugin->exit(
+        status => "CRITICAL",
+        message => "SNMP CRITICAL: string '$opt->{match}' not found"
+    );
 }
 
 $plugin->exit(
-    status => $status,
-    message => "SNMP $status: string '$value' found"
+    status => "OK",
+    message => "SNMP OK: string '$found' found"
 );
-

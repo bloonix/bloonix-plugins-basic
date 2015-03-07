@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.32-1) unstable; urgency=low
+
+    * Modified option 'misses' of check-imap. It's now possible
+      to use a expire time (1m, 5h, 3d) instead a counter.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 20 Feb 2015 12:18:43 +0100
+
 bloonix-plugins-basic (0.31-1) unstable; urgency=low
 
     * Allow complex search strings for plugin check-imap.
