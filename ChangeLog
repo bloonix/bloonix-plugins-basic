@@ -1,4 +1,4 @@
-bloonix-plugins-basic (0.33) released at 2015-XX-XX
+bloonix-plugins-basic (0.33) released at 2015-03-09
 
     * Fixed a bug in check-snmp-walk. The check returns OK even if
       a the searched string weren't found.

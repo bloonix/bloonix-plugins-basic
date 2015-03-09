@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.32
+Version: 0.33
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Mon Mar 09 2015 Jonny Schulz <js@bloonix.de> - 0.33-1
+- Fixed a bug in check-snmp-walk. The check returns OK even if
+  a the searched string weren't found.
 * Fri Feb 20 2015 Jonny Schulz <js@bloonix.de> - 0.32-1
 - Modified option 'misses' of check-imap. It's now possible
   to use a expire time (1m, 5h, 3d) instead a counter.

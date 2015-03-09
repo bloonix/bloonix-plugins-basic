@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.33-1) unstable; urgency=low
+
+    * Fixed a bug in check-snmp-walk. The check returns OK even if
+      a the searched string weren't found.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 09 Mar 2015 18:13:59 +0100
+
 bloonix-plugins-basic (0.32-1) unstable; urgency=low
 
     * Modified option 'misses' of check-imap. It's now possible
