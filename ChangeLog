@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.34) released at 2015-04-14
+
+    * Added plugin check-by-satallite.
+
 bloonix-plugins-basic (0.33) released at 2015-03-09
 
     * Fixed a bug in check-snmp-walk. The check returns OK even if

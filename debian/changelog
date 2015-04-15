@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.34-1) unstable; urgency=low
+
+    * Added plugin check-by-satallite.
+
+ -- Jonny Schulz <js@bloonix.de>  Thu, 16 Apr 2015 00:14:30 +0200
+
 bloonix-plugins-basic (0.33-1) unstable; urgency=low
 
     * Fixed a bug in check-snmp-walk. The check returns OK even if
