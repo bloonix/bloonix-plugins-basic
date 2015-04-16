@@ -1,0 +1,505 @@
+#!/usr/bin/perl
+
+package Bloonix::LocationCheck;
+
+use strict;
+use warnings;
+use Bloonix::Dispatcher;
+use Bloonix::IO::SIPC;
+use JSON;
+use Log::Handler;
+
+use base qw(Bloonix::Accessor);
+__PACKAGE__->mk_accessors(qw/exitcode json log/);
+
+sub run {
+    my ($class, %opts) = @_;
+    my $self = bless \%opts, $class;
+
+    $self->json(JSON->new);
+    $self->exitcode({ qw(OK 0 WARNING 1 CRITICAL 2 UNKNOWN 3) });
+    $self->log(Log::Handler->get_logger("bloonix"));
+
+    if ($self->{loglevel}) {
+        $self->log->add(screen => { maxlevel => $self->{loglevel} });
+    }
+
+    $self->{concurrency} //= 3;
+    $self->{check_type} //= "failover";
+
+    my $method = "check_$self->{check_type}";
+    $self->exit($self->$method);
+}
+
+sub check_failover {
+    my $self = shift;
+
+    $self->log->info("start failover check");
+
+    return $self->failover_checks($self->{locations});
+}
+
+sub check_rotate {
+    my $self = shift;
+
+    $self->log->info("start rotate check");
+
+    my (@check_locations, %location_by_hostname);
+    my $cache_file = "/var/cache/bloonix/location-cache-$self->{service_id}.json";
+    my $locations = $self->get_locations($cache_file);
+    my $from = 0;
+
+    foreach my $i (0 .. $#{$locations}) {
+        my $location = $locations->[$i];
+        if ($location->{last}) {
+            $location->{last} = 0;
+            $from = $i + 1;
+        }
+    }
+
+    foreach my $i (0..2) {
+        if (!$locations->[$from]) {
+            $from = 0;
+        }
+        push @check_locations, $locations->[$from];
+        $from++;
+    }
+
+    my $return = $self->failover_checks(\@check_locations);
+    # clone $return
+    $return->{result} = [ $self->json->decode( $self->json->encode($return) ) ];
+
+    $self->safe_locations($locations, $cache_file);
+    return $return;
+}
+
+sub check_multiple {
+    my $self = shift;
+    my $time = time;
+    my @locations = @{$self->{locations}};
+    my @ready = @locations;
+    my @finish = ();
+
+    my $dispatcher = Bloonix::Dispatcher->new(
+        worker => $self->{concurrency},
+        sock_file => "/tmp/bloonix-location-agent.sock"
+    );
+
+    $dispatcher->on(ready => sub {
+        my @return;
+
+        if (@ready) {
+            @return = @ready;
+            @ready = ();
+        }
+
+        return @return;
+    });
+
+    $dispatcher->on(quit => sub {
+         return @locations == @finish ? 1 : 0;
+    });
+
+    $dispatcher->on(finish => sub {
+        while (@_) {
+            my ($status, $location, $message) = (shift, shift, shift);
+            push @finish, {
+                response => $message,
+                location => $location
+            };
+        }
+    });
+
+    $dispatcher->on(process => sub {
+        my $location = shift;
+        my $response = $self->request($location, $self->{command});
+        $dispatcher->send_done($response || 0);
+    });
+
+    $dispatcher->run;
+
+    my $return = {
+        status => "UNKNOWN",
+        result => [],
+        stats => {}
+    };
+
+    my $count_locations = 0;
+    my $status_count = {};
+
+    foreach my $result (@finish) {
+        my $response = $result->{response};
+        my $location = $result->{location};
+        my $hostname = $location->{hostname};
+
+        if (!$response) {
+            $self->log->error("location $hostname is not online");
+            push @{ $return->{result} }, {
+                status => "UNKNOWN",
+                message => "location $hostname is not online",
+                hostname => $hostname
+            };
+            $status_count->{UNKNOWN}++;
+            next;
+        }
+
+        if ($response->{status} ne "ok") {
+            $self->log->error("response of the location server:", $response->{message});
+            push @{ $return->{result} }, {
+                status => "UNKNOWN",
+                message => "location $hostname is not online",
+                hostname => $hostname
+            };
+            $status_count->{UNKNOWN}++;
+            next;
+        }
+
+        my $data = $response->{data};
+        push @{ $return->{result} }, {
+            status => $data->{status},
+            message => $data->{message},
+            hostname => $hostname,
+            stats => $data->{stats},
+            tags => $data->{tags}
+        };
+
+        if ($data->{stats}) {
+            $return->{stats}->{$hostname} = $data->{stats};
+        }
+
+        if ($self->exitcode->{ $return->{status} } > $self->exitcode->{ $data->{status} }) {
+            $return->{status} = $data->{status};
+        }
+
+        $status_count->{$data->{status}}++;
+        $count_locations++;
+    }
+
+    $return->{message} = join(" ", 
+        $count_locations,
+        $count_locations == 1 ? "location" : "locations",
+        "checked"
+    );
+
+    if (scalar keys %$status_count) {
+        foreach my $status (qw/UNKNOWN CRITICAL WARNING OK/) {
+            if ($status_count->{$status}) {
+                $return->{message} .= ", ";
+                $return->{message} .= join(" ",
+                    $status_count->{$status},
+                    $status_count->{$status} == 1 ? "location" : "locations",
+                    $status
+                );
+            }
+        }
+    }
+
+    return $return;
+}
+
+sub failover_checks {
+    my ($self, $locations) = @_;
+    my ($location, @result, @checked_locations, $lowest_status);
+
+    my $return = {
+        status => "UNKNOWN",
+        message => "there are no locations configured"
+    };
+
+    while (@$locations) {
+        $location = shift @$locations;
+        my $result = $self->request($location, $self->{command});
+        push @checked_locations, $location->{hostname};
+
+        if (!$result) {
+            $result = {
+                status => "UNKNOWN",
+                message => "location $location->{hostname} is not reachable",
+                hostname => $location->{hostname}
+            };
+
+            $self->log->error($result->{message});
+        } elsif ($result->{status} ne "ok") {
+            $result = {
+                status => "UNKNOWN",
+                message => "response of the location server $location->{hostname}: $result->{message}",
+                hostname => $location->{hostname}
+            };
+
+            $self->log->error($result->{message});
+        } else {
+            $result = $result->{data};
+        }
+
+        $result->{tags} //= "";
+        $result->{hostname} = $location->{hostname};
+        push @result, $result;
+
+        if (!$lowest_status || $self->exitcode->{ $result->{status} } < $self->exitcode->{ $lowest_status->{status} }) {
+            $lowest_status = $result;
+        }
+
+        if ($result->{status} eq "OK") {
+            last;
+        }
+    }
+
+    if (@result) {
+        $return = $self->json->decode( $self->json->encode($lowest_status) );
+        $return->{message} .= " (checked from ". join(", ", @checked_locations) .")";
+
+        if ($return->{stats}) {
+            $return->{stats}->{hostname} = $return->{hostname};
+        } else {
+            $return->{stats} = { hostname => $return->{hostname} };
+        }
+
+        if (@result) {
+            $return->{result} = \@result;
+        }
+    }
+
+    $location->{last} = 1;
+    return $return;
+}
+
+sub safe_locations {
+    my ($self, $locations, $file) = @_;
+
+    if (open my $fh, ">", $file) {
+        print $fh $self->json->encode($locations);
+        close $fh;
+    } else {
+        $self->log->error("unable to open $file writing: $!");
+    }
+}
+
+sub get_locations {
+    my ($self, $file) = @_;
+    my $service_id = $self->{service_id};
+    my $locations;
+
+    if (open my $fh, "<", $file) {
+        local $/;
+        my $data = <$fh>;
+        close $fh;
+        eval { $locations = $self->json->decode($data) };
+    }
+
+    if (!$locations) {
+        return [ sort { $a->{hostname} cmp $b->{hostname} } @{$self->{locations}} ];
+    }
+
+    my $request_locations = $self->locations_by_hostname($self->{locations});
+    my $cached_locations = $self->locations_by_hostname($locations);
+    my $re_order = 0;
+
+    foreach my $hostname (keys %$request_locations) {
+        if (!exists $cached_locations->{$hostname}) {
+            $cached_locations->{$hostname} = $request_locations->{$hostname};
+            $re_order = 1;
+        }
+        $cached_locations->{$hostname}->{ipaddr} = $request_locations->{$hostname}->{ipaddr};
+    }
+
+    foreach my $hostname (keys %$cached_locations) {
+        if (!exists $request_locations->{$hostname}) {
+            delete $cached_locations->{$hostname};
+            $re_order = 1;
+        }
+    }
+
+    if ($re_order) {
+        $locations = [ map { $cached_locations->{$_} } sort keys %$cached_locations ];
+    }
+
+    return $locations;
+}
+
+sub locations_by_hostname {
+    my ($self, $locations) = @_;
+    my %by_hostname;
+
+    foreach my $location (@$locations) {
+        $by_hostname{$location->{hostname}} = $location;
+    }
+
+    return \%by_hostname;
+}
+
+sub request {
+    my ($self, $location, $command) = @_;
+
+    $self->log->info("send request to location $location->{hostname}");
+    my $response;
+
+    eval {
+        $SIG{__DIE__} = sub { alarm(0) };
+        $SIG{ALRM} = sub { die "timeout" };
+        alarm(60);
+        my $sock = $self->connect($location);
+        if ($sock) {
+            $sock->send({
+                action => "exec",
+                authkey => $self->{authkey},
+                data => $command
+            });
+            $response = $sock->recv;
+            $sock->disconnect;
+        }
+        alarm(0);
+    };
+
+    if ($@) {
+        $self->log->error($@);
+        print STDERR $@;
+        return undef;
+    }
+
+    return $response;
+}
+
+sub connect {
+    my ($self, $location) = @_;
+
+    my %opts = (
+        peeraddr => $location->{ipaddr},
+        peerport => 5464,
+        use_ssl => "yes",
+        ssl_verifycn_name => $location->{hostname}
+    );
+
+    foreach my $key (qw/ssl_ca_path ssl_ca_file ssl_cert_file ssl_key_file ssl_verify_mode/) {
+        if ($self->{$key}) {
+            $opts{$key} = $self->{$key};
+        }
+    }
+
+    my $socket = Bloonix::IO::SIPC->new(\%opts);
+
+    if (!$socket->connect) {
+        die $socket->errstr;
+    }
+
+    return $socket;
+}
+
+sub exit {
+    my $self = shift;
+    my $message = @_ == 1 ? shift : {@_};
+    my $status = $message->{status};
+
+    if ($status !~ /^(OK|WARNING|CRITICAL|UNKNOWN)\z/) {
+        $status = $message->{status} = "UNKNOWN";
+    }
+
+    print JSON->new->pretty->encode($message), "\n";
+    CORE::exit $self->{exitcode}->{$status};
+}
+
+package main;
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+
+my $plugin = Bloonix::Plugin->new();
+
+$plugin->add_option(
+    option => "check-type",
+    value => "failover|rotate|multiple",
+    value_type => "string",
+    mandatory => 1,
+    regex => qr/^(failover|rotate|multiple)\z/,
+    description => "This is the check type. Possible values are failover, rotate and multiple."
+);
+
+$plugin->add_option(
+    option => "concurrency",
+    value => "number",
+    value_type => "number",
+    default => 3,
+    description => "How many concurrent requests to request multiple checkpoints."
+);
+
+$plugin->add_option(
+    option => "service-id",
+    value => "number",
+    value_type => "number",
+    mandatory => 1,
+    description => "This is the service id of the check."
+);
+
+$plugin->add_option(
+    option => "locations",
+    value => "object",
+    value_type => "array",
+    mandatory => 1,
+    multiple => 1,
+    description => "This are the checkpoints to check."
+);
+
+$plugin->add_option(
+    option => "command",
+    value => "object",
+    value_type => "hash",
+    mandatory => 1,
+    description => "This are the command plus options to send to each checkpoint."
+);
+
+$plugin->add_option(
+    option => "authkey",
+    value => "Authentification string",
+    value_type => "string",
+    description => "A string to authentificate against the satellite.",
+    mandatory => 1
+);
+
+$plugin->add_option(
+    option => "ssl-ca-path",
+    value => "SSL CA path",
+    value_type => "string",
+    description => "The path to the SSL CA files."
+);
+
+$plugin->add_option(
+    option => "ssl-ca-file",
+    value => "SSL CA File",
+    value_type => "string",
+    description => "The path to the SSL CA file."
+);
+
+$plugin->add_option(
+    option => "ssl-cert-file",
+    value => "SSL Cert File",
+    value_type => "string",
+    description => "The path to the SSL certificate."
+);
+
+$plugin->add_option(
+    option => "ssl-key-file",
+    value => "SSL Key File",
+    value_type => "string",
+    description => "The path to the SSL key file."
+);
+
+$plugin->add_option(
+    option => "ssl-verify-mode",
+    value => "SSL Verify Mode",
+    value_type => "string",
+    description => "SSL verify mode (peer or none). Default: peer",
+    regex => qr/^(none|peer)\z/,
+    default => "peer"
+);
+
+$plugin->add_option(
+    option => "loglevel",
+    value => "Log level",
+    value_type => "string",
+    description => "The log level.",
+    regex => qr/^(debug|info|notice|warning|error|critical|alert|emergency)\z/,
+    optional => 1
+);
+
+my $opt = $plugin->parse_options;
+Bloonix::LocationCheck->run(%$opt);
