@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.35-1) unstable; urgency=low
+
+    * Increased recv timeout for plugin check-by-satellite.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 19 Apr 2015 21:49:43 +0200
+
 bloonix-plugins-basic (0.34-1) unstable; urgency=low
 
     * Added plugin check-by-satallite.
