@@ -366,7 +366,8 @@ sub connect {
         peeraddr => $location->{ipaddr},
         peerport => 5464,
         use_ssl => "yes",
-        ssl_verifycn_name => $location->{hostname}
+        ssl_verifycn_name => $location->{hostname},
+        recv_timeout => 60
     );
 
     foreach my $key (qw/ssl_ca_path ssl_ca_file ssl_cert_file ssl_key_file ssl_verify_mode/) {

@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.35) released at 2015-04-19
+
+    * Increased recv timeout for plugin check-by-satellite.
+
 bloonix-plugins-basic (0.34) released at 2015-04-14
 
     * Added plugin check-by-satallite.
