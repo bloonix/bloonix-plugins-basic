@@ -434,7 +434,7 @@ $plugin->add_option(
 $plugin->add_option(
     option => "locations",
     value => "object",
-    value_type => "array",
+    value_type => "hash",
     mandatory => 1,
     multiple => 1,
     description => "This are the checkpoints to check."
