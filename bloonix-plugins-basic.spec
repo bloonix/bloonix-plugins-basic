@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.35
+Version: 0.36
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Wed Apr 22 2015 Jonny Schulz <js@bloonix.de> - 0.36-1
+- check-by-satellite: fixed value type of parameter locations.
 * Sun Apr 19 2015 Jonny Schulz <js@bloonix.de> - 0.35-1
 - Increased recv timeout for plugin check-by-satellite.
 * Thu Apr 16 2015 Jonny Schulz <js@bloonix.de> - 0.34-1

@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.36-1) unstable; urgency=low
+
+    * check-by-satellite: fixed value type of parameter locations.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 22 Apr 2015 21:58:42 +0200
+
 bloonix-plugins-basic (0.35-1) unstable; urgency=low
 
     * Increased recv timeout for plugin check-by-satellite.
