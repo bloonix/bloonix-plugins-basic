@@ -8,6 +8,6 @@ Homepage: http://www.bloonix.de/
 
 Package: bloonix-plugins-basic
 Architecture: all
-Depends: ${shlibs:Depends}, ${misc:Depends}, bloonix-core (>= 0.14), libauthen-sasl-perl, libmime-base64-perl, libnet-smtp-ssl-perl, libnet-dns-perl, curl
+Depends: ${shlibs:Depends}, ${misc:Depends}, bloonix-core (>= 0.19), libauthen-sasl-perl, libmime-base64-perl, libnet-smtp-ssl-perl, libnet-dns-perl, curl
 Description: Bloonix Plugins Base
  bloonix-plugins-basic provides OS independent plugins.

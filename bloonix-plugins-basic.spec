@@ -13,7 +13,7 @@ BuildArch: noarch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 
 Source0: http://download.bloonix.de/sources/%{name}-%{version}.tar.gz
-Requires: bloonix-core >= 0.14
+Requires: bloonix-core >= 0.19
 Requires: curl
 Requires: perl(Getopt::Long)
 Requires: perl(Time::HiRes)
