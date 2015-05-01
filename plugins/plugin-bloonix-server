@@ -1,0 +1,119 @@
+plugin {
+    id 200
+    plugin Bloonix.Server.Check
+    command check-bloonix-server
+    datatype statistic
+    category System,Bloonix
+    netaccess yes
+    prefer localhost
+    abstract Bloonix server status
+    description Bloonix statistics
+}
+
+statistic {
+    statkey time
+    alias Response time
+    datatype float
+    units ms
+    description Time in milliseconds waiting for response.
+}
+
+statistic {
+    statkey sendrep
+    alias Sending reply
+    datatype bigint
+    description Sending Reply.
+}
+
+statistic {
+    statkey readreq
+    alias Reading request
+    datatype bigint
+    description Reading Request.
+}
+
+statistic {
+    statkey idle
+    alias Idle workers
+    datatype bigint
+    description Idle workers.
+}
+
+statistic {
+    statkey startup
+    alias Starting up
+    datatype bigint
+    description Starting up.
+}
+
+statistic {
+    statkey processing
+    alias Processing request
+    datatype bigint
+    description Processing request.
+}
+
+statistic {
+    statkey none
+    alias Unknown status
+    datatype bigint
+    description Unknown status.
+}
+
+statistic {
+    statkey freeslot
+    alias Free slot
+    datatype bigint
+    description Free slot.
+}
+
+chart {
+    id 1
+    title Bloonix server response time
+    options {
+        ylabel time in ms
+        units null
+        chart-type area
+        series {
+            name time
+            color \#005467
+        }
+    }
+}
+
+chart {
+    id 2
+    title Bloonix process status
+    options {
+        ylabel count
+        chart-type area
+        series {
+            name none
+            color \#66c066
+        }
+        series {
+            name startup
+            color \#0000ff
+        }
+        series {
+            name readreq
+            color \#ff6666
+        }
+        series {
+            name sendrep
+            color \#bf00bf
+        }
+        series {
+            name processing
+            color \#ff0000
+        }
+        series {
+            name idle
+            color \#7648eb
+        }
+        series {
+            name freeslot
+            color \#7f7fff
+        }
+    }
+}

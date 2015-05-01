@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use Bloonix::IO::SIPC;
+
+my $map = {
+    S => "startup",
+    _ => "idle",
+    R => "readreq",
+    P => "processing",
+    W => "sendrep",
+    N => "none",
+    F => "freeslot"
+};
+
+my $plugin = Bloonix::Plugin->new(version => "0.1");
+
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(default => 5460);
+$plugin->add_option(
+    name => "Authkey",
+    option => "authkey",
+    value_desc => "authkey",
+    value_type => "string",
+    description => "The authkey to authenticate with the server."
+);
+$plugin->has_threshold(keys => [ "time", values %$map ]);
+
+my $opt = $plugin->parse_options;
+my $res;
+$plugin->runtime;
+
+$plugin->eval(
+    timeout => $opt->{critical} + 5,
+    action => "connection",
+    add_mtr => $opt->{host},
+    callback => sub {
+        my $socket = Bloonix::IO::SIPC->new(
+            peeraddr => $opt->{host},
+            peerport => $opt->{port},
+            use_ssl => "yes",
+            ssl_verify_mode => "none"
+        );
+
+        if (!$socket->connect) {
+            $plugin->exit(
+                status => "CRITICAL",
+                message => "unable to connect to host $opt->{host} port $opt->{port} - $@"
+            );
+        }
+
+        my $req = { action => "server-status" };
+
+        if ($opt->{authkey}) {
+            $req->{authkey} = $opt->{authkey};
+        }
+
+        $socket->send($req);
+        $res = $socket->recv;
+    }
+);
+
+my $stat = { time => $plugin->runtime, map { $_ => 0 } values %$map };
+my $status = "OK";
+my $message = "";
+
+if (!$res || ref $res ne "HASH") {
+    $plugin->exit(
+        status => "CRITICAL",
+        message => "invalid data received"
+    );
+}
+
+if ($res->{status} ne "ok") {
+    $plugin->exit(
+        status => "CRITICAL",
+        message => "status=$res->{status}, message=$res->{message}"
+    );
+}
+
+if (exists $res->{data} && ref $res->{data} eq "ARRAY") {
+    foreach my $r (@{$res->{data}}) {
+        my $status = $r->{status} || "F";
+        $status = exists $map->{$status} ? $map->{$status} : "none";
+        $stat->{$status}++;
+    }
+}
+
+my $result = $plugin->check_thresholds(
+    stats => $stat,
+    upshot_keys => [qw(time waiting processing freeslot)],
+    exit => "yes"
+);
