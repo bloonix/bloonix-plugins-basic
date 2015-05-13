@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.37-1) unstable; urgency=low
+
+    * New check check-bloonix-server.
+
+ -- Jonny Schulz <js@bloonix.de>  Thu, 07 May 2015 14:30:46 +0200
+
 bloonix-plugins-basic (0.36-1) unstable; urgency=low
 
     * check-by-satellite: fixed value type of parameter locations.

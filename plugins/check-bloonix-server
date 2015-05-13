@@ -16,7 +16,19 @@ my $map = {
 
 my $plugin = Bloonix::Plugin->new(version => "0.1");
 
-$plugin->has_host(mandatory => 1);
+$plugin->example(
+    description => "Example to check the bloonix server:",
+    arguments => [
+        host => "127.0.0.1",
+        port => 5460,
+        warning => "freeslot:lt:5",
+        critical => "freeslot:lt:3",
+        warning => "idle:lt:5",
+        critical => "idle:lt:3"
+    ]
+);
+
+$plugin->has_host(default => "127.0.0.1");
 $plugin->has_port(default => 5460);
 $plugin->add_option(
     name => "Authkey",
