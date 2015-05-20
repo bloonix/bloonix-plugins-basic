@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.37
+Version: 0.38
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Wed May 20 2015 Jonny Schulz <js@bloonix.de> - 0.38-1
+- check-by-satellite: fixed result data of rotate checks.
 * Thu May 07 2015 Jonny Schulz <js@bloonix.de> - 0.37-1
 - New check check-bloonix-server.
 * Wed Apr 22 2015 Jonny Schulz <js@bloonix.de> - 0.36-1

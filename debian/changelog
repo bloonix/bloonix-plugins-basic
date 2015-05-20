@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.38-1) unstable; urgency=low
+
+    * check-by-satellite: fixed result data of rotate checks.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 20 May 2015 22:42:11 +0200
+
 bloonix-plugins-basic (0.37-1) unstable; urgency=low
 
     * New check check-bloonix-server.
