@@ -67,7 +67,7 @@ sub check_rotate {
 
     my $return = $self->failover_checks(\@check_locations);
     # clone $return
-    $return->{result} = [ $self->json->decode( $self->json->encode($return) ) ];
+    #$return->{result} = [ $self->json->decode( $self->json->encode($return) ) ];
 
     $self->safe_locations($locations, $cache_file);
     return $return;
