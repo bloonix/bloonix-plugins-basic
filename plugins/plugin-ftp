@@ -6,6 +6,7 @@ plugin {
     category Network
     netaccess yes
     prefer remote
+    worldwide yes
     abstract FTP check
     description FTP statistics
 }

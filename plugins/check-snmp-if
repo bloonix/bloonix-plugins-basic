@@ -34,6 +34,7 @@ Copyright (C) 2014 by Jonny Schulz. All rights reserved.
 use strict;
 use warnings;
 use Bloonix::Plugin;
+use Fcntl qw(:flock :DEFAULT);
 use Net::SNMP;
 
 # --------------------------------------------------
@@ -102,7 +103,25 @@ $plugin->has_threshold(
 $plugin->add_option(
     name => "Trigger a CRITICAL if not 'up'",
     option => "crit-if-not-up",
-    description => "This flag enables to check if the status of ifAdminStatus is different from ifOperStatus. That means that if ifAdminStatus is configured to be up then ifOperStatus must also been up."
+    description => join(" ",
+        "This flag enables to check if the status of ifAdminStatus is different from",
+        "ifOperStatus. That means that if ifAdminStatus is configured to be up then",
+        "ifOperStatus must also been up."
+    )
+);
+
+$plugin->add_option(
+    name => "Debug",
+    option => "debug",
+    description => "Turn on debugging. Just useful if you want to test something.",
+    command_line_only => 1
+);
+
+$plugin->add_option(
+    name => "No cache",
+    option => "no-cache",
+    description => "Do not cache SNMP results for 10 seconds.",
+    command_line_only => 1
 );
 
 # --------------------------------------------------
@@ -177,7 +196,7 @@ my $if_oper_status = {
 # --------------------------------------------------
 
 my ($if_result, $if_hc_result, $if_names);
-my ($connection_string, $cache_file, $file_stat, $time);
+my ($connection_string, $cache_file, $file_stat, $time, $data);
 
 $connection_string = join("_", "bloonix-check-snmp-if-cache", $opt->{host}, $opt->{community}, $opt->{port});
 $connection_string =~ s/\W/_/g;
@@ -185,20 +204,44 @@ $cache_file = join("/", $plugin->plugin_libdir, $connection_string);
 $cache_file .= ".json";
 $file_stat = [ stat($cache_file) ];
 
-if (defined $file_stat->[10] && $file_stat->[10] + 10 >= time) {
-    if (open my $fh, "<", $cache_file) {
-        my $data = do { local $/; <$fh> };
-        $data = JSON->new->decode($data);
-        $if_names = $data->{if}->{names};
-        $if_result = $data->{if}->{result};
-        $if_hc_result = $data->{if}->{hc_result};
-        $time = $data->{time};
-    } else {
-        $plugin->exit(
-            status => "UNKNOWN",
-            message => "unable to open file '$cache_file' for reading - $!"
-        );
+#system("cat $cache_file");
+sysopen my $fh, $cache_file, O_RDWR | O_CREAT or do {
+    $plugin->exit(
+        status => "UNKNOWN",
+        message => "unable to open file '$cache_file' - $!"
+    );
+};
+
+flock($fh, LOCK_EX);
+
+if ($file_stat->[7]) {
+    my $rest = $file_stat->[7];
+    my $offset = 0;
+    my $done = 0;
+
+    while ($rest > 0) {
+        my $len = sysread($fh, my $buf, $rest, $offset);
+
+        if (!defined $len) {
+            next if $! =~ /^Interrupted/;
+            $plugin->exit(
+                status => "UNKNOWN",
+                message => "unable to read from file '$cache_file' - $!"
+            );
+        }
+
+        $data .= $buf;
+        $rest -= $len;
+        $offset += $len;
     }
+}
+
+if (!$opt->{no_cache} && defined $file_stat->[10] && $file_stat->[10] + 10 >= time && $data && $data =~ /^{.+}$/) {
+    $data = JSON->new->decode($data);
+    $if_names = $data->{if}->{names};
+    $if_result = $data->{if}->{result};
+    $if_hc_result = $data->{if}->{hc_result};
+    $time = $data->{time};
 } else {
     my $snmp = $plugin->start_snmp_session;
     $snmp->max_msg_size(65535);
@@ -207,22 +250,35 @@ if (defined $file_stat->[10] && $file_stat->[10] + 10 >= time) {
     $if_names = $snmp->get_table($if_name_base);
     $time = time;
 
-    if (open my $fh, ">", $cache_file) {
-        print $fh JSON->new->encode({
-            time => $time,
-            if => {
-                names => $if_names,
-                result => $if_result,
-                hc_result => $if_hc_result
-            }
-        });
-    } else {
-        $plugin->exit(
-            status => "UNKNOWN",
-            message => "unable to open file '$cache_file' for writing - $!"
-        );
+    sysseek $fh, 0, 0;
+
+    $data = JSON->new->encode({
+        time => $time,
+        if => {
+            names => $if_names,
+            result => $if_result,
+            hc_result => $if_hc_result
+        }
+    });
+
+    my $rest = length $data;
+    my $offset = 0;
+
+    while ($rest) {
+        my $written = syswrite $fh, $data, $rest, $offset;
+
+        if (!defined $written) {
+            die "system write error: $!";
+        } elsif ($written) {
+            $rest -= $written;
+            $offset += $written;
+        }
     }
+
+    truncate $fh, length $data;
 }
+
+close $fh;
 
 if (!defined $if_result) {
     $plugin->exit(

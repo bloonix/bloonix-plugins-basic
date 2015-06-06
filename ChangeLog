@@ -1,3 +1,8 @@
+bloonix-plugins-basic (0.39) released at 2015-XX-XX
+
+    * Set worldwide=yes for check-ftp.
+    * Fixed concurrent access to the cache file of SNMP results in check-snmp-if.
+
 bloonix-plugins-basic (0.38) released at 2015-05-20
 
     * check-by-satellite: fixed result data of rotate checks.
