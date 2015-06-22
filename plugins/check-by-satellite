@@ -147,7 +147,7 @@ sub check_multiple {
             $self->log->error("response of the location server:", $response->{message});
             push @{ $return->{result} }, {
                 status => "UNKNOWN",
-                message => "location $hostname is not online",
+                message => "location $hostname returns an error: $response->{message}",
                 hostname => $hostname
             };
             $status_count->{UNKNOWN}++;
