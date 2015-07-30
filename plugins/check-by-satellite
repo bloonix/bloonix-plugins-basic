@@ -66,9 +66,6 @@ sub check_rotate {
     }
 
     my $return = $self->failover_checks(\@check_locations);
-    # clone $return
-    #$return->{result} = [ $self->json->decode( $self->json->encode($return) ) ];
-
     $self->safe_locations($locations, $cache_file);
     return $return;
 }
@@ -118,14 +115,10 @@ sub check_multiple {
 
     $dispatcher->run;
 
-    my $return = {
-        status => "UNKNOWN",
-        result => [],
-        stats => {}
-    };
-
+    my $return = { status => "UNKNOWN" };
     my $count_locations = 0;
     my $status_count = {};
+    my @result = ();
 
     foreach my $result (@finish) {
         my $response = $result->{response};
@@ -134,7 +127,7 @@ sub check_multiple {
 
         if (!$response) {
             $self->log->error("location $hostname is not online");
-            push @{ $return->{result} }, {
+            push @result, {
                 status => "UNKNOWN",
                 message => "location $hostname is not online",
                 hostname => $hostname
@@ -145,7 +138,7 @@ sub check_multiple {
 
         if ($response->{status} ne "ok") {
             $self->log->error("response of the location server:", $response->{message});
-            push @{ $return->{result} }, {
+            push @result, {
                 status => "UNKNOWN",
                 message => "location $hostname returns an error: $response->{message}",
                 hostname => $hostname
@@ -155,16 +148,18 @@ sub check_multiple {
         }
 
         my $data = $response->{data};
-        push @{ $return->{result} }, {
-            status => $data->{status},
-            message => $data->{message},
-            hostname => $hostname,
-            stats => $data->{stats},
-            tags => $data->{tags}
-        };
+        $data->{hostname} = $hostname;
+
+        if ($data->{status} ne "OK") {
+            push @result, $data;
+        }
 
         if ($data->{stats}) {
             $return->{stats}->{$hostname} = $data->{stats};
+        }
+
+        if ($data->{debug}) {
+            push @{$return->{debug}}, { $hostname => $data->{debug} };
         }
 
         if ($self->exitcode->{ $return->{status} } > $self->exitcode->{ $data->{status} }) {
@@ -180,6 +175,10 @@ sub check_multiple {
         $count_locations == 1 ? "location" : "locations",
         "checked"
     );
+
+    if (@result && ($status_count->{UNKNOWN} || $status_count->{CRITICAL} || $status_count->{WARNING})) {
+        push @{$return->{result}}, \@result;
+    }
 
     if (scalar keys %$status_count) {
         foreach my $status (qw/UNKNOWN CRITICAL WARNING OK/) {
@@ -199,12 +198,8 @@ sub check_multiple {
 
 sub failover_checks {
     my ($self, $locations) = @_;
-    my ($location, @result, @checked_locations, $lowest_status);
-
-    my $return = {
-        status => "UNKNOWN",
-        message => "there are no locations configured"
-    };
+    my ($location, @result, @debug, @checked_locations, $lowest_status, $return);
+    my $all_ok = 1;
 
     while (@$locations) {
         $location = shift @$locations;
@@ -235,6 +230,10 @@ sub failover_checks {
         $result->{hostname} = $location->{hostname};
         push @result, $result;
 
+        if ($result->{debug}) {
+            push @debug, { $location->{hostname} => $result->{debug} };
+        }
+
         if (!$lowest_status || $self->exitcode->{ $result->{status} } < $self->exitcode->{ $lowest_status->{status} }) {
             $lowest_status = $result;
         }
@@ -242,6 +241,8 @@ sub failover_checks {
         if ($result->{status} eq "OK") {
             last;
         }
+
+        $all_ok = 0;
     }
 
     if (@result) {
@@ -254,9 +255,18 @@ sub failover_checks {
             $return->{stats} = { hostname => $return->{hostname} };
         }
 
-        if (@result) {
+        if (@result && $all_ok == 0) {
             $return->{result} = \@result;
         }
+    } else {
+        $return = {
+            status => "UNKNOWN",
+            message => "there are no locations configured"
+        };
+    }
+
+    if (@debug) {
+        $return->{debug} = \@debug;
     }
 
     $location->{last} = 1;

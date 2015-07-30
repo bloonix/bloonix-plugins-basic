@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.40) released at 2015-XX-XX
+
+    * Minimized "result" data of check-by-satellite and store now only
+      not OK results.
+    * Fixed: "debug" data are now saved by multiple checks.
+
 bloonix-plugins-basic (0.39) released at 2015-06-22
 
     * Set worldwide=yes for check-ftp.
