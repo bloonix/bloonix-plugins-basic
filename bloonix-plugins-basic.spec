@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.38
+Version: 0.39
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,11 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Mon Jun 22 2015 Jonny Schulz <js@bloonix.de> - 0.39-1
+- Set worldwide=yes for check-ftp.
+- Fixed concurrent access to the cache file of SNMP results in check-snmp-if.
+- Fixed error message "location xxx is not online" if an location returns
+  an error.
 * Wed May 20 2015 Jonny Schulz <js@bloonix.de> - 0.38-1
 - check-by-satellite: fixed result data of rotate checks.
 * Thu May 07 2015 Jonny Schulz <js@bloonix.de> - 0.37-1

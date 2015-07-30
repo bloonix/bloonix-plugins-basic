@@ -1,4 +1,4 @@
-bloonix-plugins-basic (0.39) released at 2015-XX-XX
+bloonix-plugins-basic (0.39) released at 2015-06-22
 
     * Set worldwide=yes for check-ftp.
     * Fixed concurrent access to the cache file of SNMP results in check-snmp-if.

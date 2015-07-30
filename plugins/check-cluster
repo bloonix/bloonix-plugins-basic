@@ -143,5 +143,5 @@ $plugin->exit(
     status => $status,
     message => join(", ", @message),
     stats => $stat,
-    advanced_status => $service_status
+    result => $service_status
 );

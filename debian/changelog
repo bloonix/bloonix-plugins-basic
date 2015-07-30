@@ -1,3 +1,12 @@
+bloonix-plugins-basic (0.39-1) unstable; urgency=low
+
+    * Set worldwide=yes for check-ftp.
+    * Fixed concurrent access to the cache file of SNMP results in check-snmp-if.
+    * Fixed error message "location xxx is not online" if an location returns
+      an error.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 22 Jun 2015 11:09:36 +0200
+
 bloonix-plugins-basic (0.38-1) unstable; urgency=low
 
     * check-by-satellite: fixed result data of rotate checks.
