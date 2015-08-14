@@ -1,4 +1,4 @@
-bloonix-plugins-basic (0.40) released at 2015-XX-XX
+bloonix-plugins-basic (0.40) released at 2015-08-14
 
     * Minimized "result" data of check-by-satellite and store now only
       not OK results.
