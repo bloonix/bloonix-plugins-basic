@@ -381,11 +381,11 @@ if ($pid) {
 }
 
 if ($err =~ /^timeout/ || $ret == 28) {
+    $plugin->add_mtr($ipaddr);
     $plugin->exit(
         status => "CRITICAL",
         message => "request timed out after $opt->{timeout} seconds, IP: $ipaddr",
-        tags => "timeout",
-        mtr => $plugin->get_mtr($ipaddr)
+        tags => "timeout"
     );
 }
 
