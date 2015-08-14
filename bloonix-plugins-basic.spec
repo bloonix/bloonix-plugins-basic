@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.39
+Version: 0.40
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -57,6 +57,11 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Fri Aug 14 2015 Jonny Schulz <js@bloonix.de> - 0.40-1
+- Minimized "result" data of check-by-satellite and store now only
+  not OK results.
+- Fixed: "debug" data are now saved by multiple checks.
+- Fixed: mtr data are now stored to "debug" correctly.
 * Mon Jun 22 2015 Jonny Schulz <js@bloonix.de> - 0.39-1
 - Set worldwide=yes for check-ftp.
 - Fixed concurrent access to the cache file of SNMP results in check-snmp-if.
