@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.42-1) unstable; urgency=low
+
+    * Fixed debug data layout.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 23 Aug 2015 23:15:35 +0200
+
 bloonix-plugins-basic (0.41-1) unstable; urgency=low
 
     * Sudo config created for check-logfile.

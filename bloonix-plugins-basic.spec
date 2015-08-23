@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.41
+Version: 0.42
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Sun Aug 23 2015 Jonny Schulz <js@bloonix.de> - 0.42-1
+- Fixed debug data layout.
 * Tue Aug 18 2015 Jonny Schulz <js@bloonix.de> - 0.41-1
 - Sudo config created for check-logfile.
 * Fri Aug 14 2015 Jonny Schulz <js@bloonix.de> - 0.40-1
