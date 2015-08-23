@@ -159,7 +159,8 @@ sub check_multiple {
         }
 
         if ($data->{debug}) {
-            push @{$return->{debug}}, { $hostname => $data->{debug} };
+            $data->{debug}->{satellite} = $hostname;
+            push @{$return->{debug}}, $data->{debug};
         }
 
         if ($self->exitcode->{ $return->{status} } > $self->exitcode->{ $data->{status} }) {
@@ -231,7 +232,8 @@ sub failover_checks {
         push @result, $result;
 
         if ($result->{debug}) {
-            push @debug, { $location->{hostname} => $result->{debug} };
+            $result->{debug}->{satellite} = $location->{hostname};
+            push @debug, $result->{debug};
         }
 
         if (!$lowest_status || $self->exitcode->{ $result->{status} } < $self->exitcode->{ $lowest_status->{status} }) {

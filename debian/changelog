@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.41-1) unstable; urgency=low
+
+    * Sudo config created for check-logfile.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 18 Aug 2015 20:27:29 +0200
+
 bloonix-plugins-basic (0.40-1) unstable; urgency=low
 
     * Minimized "result" data of check-by-satellite and store now only
