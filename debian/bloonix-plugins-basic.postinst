@@ -1,0 +1,19 @@
+#!/bin/sh
+
+if [ ! -e "/etc/bloonix/agent/conf.d" ] ; then
+    mkdir -p /etc/bloonix/agent/conf.d
+    chown root:bloonix /etc/bloonix/agent/conf.d
+    chmod 750 /etc/bloonix/agent/conf.d
+fi
+
+if [ ! -e "/etc/sudoers.d/60_bloonix_check_logfile" ] ; then
+    cp -a /usr/lib/bloonix/etc/sudoers.d/60_bloonix_check_logfile /etc/sudoers.d/60_bloonix_check_logfile
+    chmod 440 /etc/sudoers.d/60_bloonix_check_logfile
+fi
+
+if [ ! -e "/etc/bloonix/agent/conf.d/check-logfile.conf" ] ; then
+    cp -a /usr/lib/bloonix/etc/conf.d/check-logfile.conf /etc/bloonix/agent/conf.d/
+    chmod 640 /etc/bloonix/agent/conf.d/check-logfile.conf
+    chown root:bloonix /etc/bloonix/agent/conf.d/check-logfile.conf
+fi
+
