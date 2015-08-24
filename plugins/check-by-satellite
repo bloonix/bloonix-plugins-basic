@@ -178,7 +178,7 @@ sub check_multiple {
     );
 
     if (@result && ($status_count->{UNKNOWN} || $status_count->{CRITICAL} || $status_count->{WARNING})) {
-        push @{$return->{result}}, \@result;
+        $return->{result} = \@result;
     }
 
     if (scalar keys %$status_count) {
