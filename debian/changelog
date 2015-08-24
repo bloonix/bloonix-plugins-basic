@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.43-1) unstable; urgency=low
+
+    * Fixed result data layout.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 24 Aug 2015 10:42:19 +0200
+
 bloonix-plugins-basic (0.42-1) unstable; urgency=low
 
     * Fixed debug data layout.

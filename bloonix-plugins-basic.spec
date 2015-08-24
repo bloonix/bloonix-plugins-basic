@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.42
+Version: 0.43
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Mon Aug 24 2015 Jonny Schulz <js@bloonix.de> - 0.43-1
+- Fixed result data layout.
 * Sun Aug 23 2015 Jonny Schulz <js@bloonix.de> - 0.42-1
 - Fixed debug data layout.
 * Tue Aug 18 2015 Jonny Schulz <js@bloonix.de> - 0.41-1
