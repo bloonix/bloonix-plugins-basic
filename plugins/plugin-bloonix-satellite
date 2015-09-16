@@ -20,7 +20,6 @@ statistic {
 
 chart {
     id 1
-    gid yeir4oZu4pewolaemeisiw4chihahpee
     title Bloonix satellite response time
     options {
         ylabel time in ms
