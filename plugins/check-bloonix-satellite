@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+
+=head1 NAME
+
+check-bloonix-satellite - Just for internal usage!
+
+=head1 REPORTING BUGS
+
+Please report all bugs to <support(at)bloonix.de>.
+
+=head1 AUTHOR
+
+Jonny Schulz <support(at)bloonix.de>.
+
+=head1 POWERED BY
+
+     _    __ _____ _____ __  __ __ __   __
+    | |__|  |     |     |  \|  |__|\  \/  /
+    |  . |  |  |  |  |  |      |  | >    <
+    |____|__|_____|_____|__|\__|__|/__/\__\
+
+=head1 COPYRIGHT
+
+Copyright (C) 2014 by Jonny Schulz. All rights reserved.
+
+=cut
+
+use strict;
+use warnings;
+use Bloonix::Plugin;
+use Bloonix::IO::SIPC;
+
+my $plugin = Bloonix::Plugin->new(version => "0.1");
+
+$plugin->has_host(mandatory => 1);
+$plugin->has_port(default => 5464);
+$plugin->has_warning(default => 10);
+$plugin->has_critical(default => 15);
+$plugin->add_option(
+    name => "Authkey",
+    option => "authkey",
+    value => "authkey",
+    value_type => "string",
+    mandatory => 1,
+    description => "This is the authentication key."
+);
+
+my $opt = $plugin->parse_options;
+my $res;
+$plugin->runtime;
+
+$plugin->eval(
+    timeout => 20,
+    action => "connection",
+    add_mtr => $opt->{host},
+    callback => sub {
+        my $socket = Bloonix::IO::SIPC->new(
+            peeraddr => $opt->{host},
+            peerport => $opt->{port},
+            use_ssl => "yes",
+            ssl_verify_mode => "none",
+            ssl_ca_path => "/etc/ssl/certs"
+        );
+
+        if (!$socket->connect) {
+            $plugin->exit(
+                status => "CRITICAL",
+                message => "unable to connect to host $opt->{host} port $opt->{port} - $@"
+            );
+        }
+
+        $socket->send({ action => "ping", authkey => $opt->{authkey} });
+        $res = $socket->recv;
+    }
+);
+
+my $time = $plugin->runtime;
+my $status = "OK";
+my $message = "";
+
+if (!$res || ref $res ne "HASH" || $res->{status} ne "ok") {
+    $status = "CRITICAL";
+    $message = "satellite application not available";
+} else {
+    $message = "response in ${time}s";
+
+    if ($opt->{critical} && $time >= $opt->{critical}) {
+        $status = "CRITICAL";
+    } elsif ($opt->{warning} && $time >= $opt->{warning}) {
+        $status = "WARNING";
+    }
+}
+
+$plugin->exit(
+    status => $status,
+    message => $message,
+    stats => { time => $time }
+);

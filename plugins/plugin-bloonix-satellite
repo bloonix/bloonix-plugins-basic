@@ -1,0 +1,34 @@
+plugin {
+    id          60
+    plugin      Bloonix.Satellite.Check
+    command     check-bloonix-satellite
+    datatype    statistic
+    category    Network,Satellite,Bloonix
+    netaccess   yes
+    prefer      remote
+    abstract    Bloonix satellite check
+    description Check a satellite server.
+}
+
+statistic {
+    statkey     time
+    alias       Response time
+    stattype    gauge
+    datatype    float
+    description The response time.
+}
+
+chart {
+    id 1
+    gid yeir4oZu4pewolaemeisiw4chihahpee
+    title Bloonix satellite response time
+    options {
+        ylabel time in ms
+        units null
+        chart-type area
+        series {
+            name time
+            color \#005467
+        }
+    }
+}

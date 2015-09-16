@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.44) released at 2015-XX-XX
+
+    * Added the new plugin Bloonix.Satellite.Check.
+
 bloonix-plugins-basic (0.43) released at 2015-08-24
 
     * Fixed result data layout.
