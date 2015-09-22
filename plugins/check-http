@@ -261,7 +261,7 @@ my %header = ();
 my $content = "";
 my $httpstat = "HTTP status unknown";
 my $time = Time::HiRes::gettimeofday();
-my $pid;
+my ($pid, $max_bytes_reached);
 
 eval {
     local $SIG{__DIE__} = sub { alarm(0) };
@@ -352,6 +352,7 @@ eval {
             }
 
             if (length $stdout > MAX_READ_LEN || length $stderr > MAX_READ_LEN) {
+                $max_bytes_reached = 1;
                 last OUTER;
             }
         }
@@ -372,12 +373,28 @@ my $ret = 0;
 $time = sprintf("%.6f", Time::HiRes::gettimeofday() - $time);
 
 if ($pid) {
-    if ($err) {
+    # If max_bytes_reached is true then waitpid will hang forever
+    # because curl is still downloading...
+    if ($err || $max_bytes_reached) {
         kill 9, $pid;
     }
 
-    waitpid($pid, 0);
-    $ret = $? > 0 ? $? >> 8 : $?;
+    eval {
+        $SIG{__DIE__} = sub { alarm(0) };
+        $SIG{ALRM} = sub { die "waitpid timeout" };
+        alarm(5);
+        waitpid($pid, 0);
+        $ret = $? > 0 ? $? >> 8 : $?;
+        alarm(0);
+    };
+
+    if ($@) {
+        kill 9, $pid;
+        $plugin->exit(
+            status => "UNKNOWN",
+            message => "waidpid on the curl process hangs, killed curl with signal 9"
+        );
+    }
 }
 
 if ($err =~ /^timeout/ || $ret == 28) {
