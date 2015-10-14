@@ -42,7 +42,11 @@ use Bloonix::Plugin;
 my $plugin = Bloonix::Plugin->new(version => "0.7");
 
 $plugin->example(
-    description => "The following example would send a HTTP request to the server and expects a HTTP status code of 200 in the reponse. Note that the string 'CRLF' is replaced with an empty line.",
+    description => join(" ",
+        "The following example would send a HTTP request to the server",
+        "and expects a HTTP status code of 200 in the reponse. Note that",
+        "the string 'CRLF' is replaced with an empty line."
+    ),
     arguments => [
         host => "www.bloonix.de",
         port => "443",
@@ -81,7 +85,10 @@ $plugin->add_option(
     value => "count lines",
     value_type => "string",
     regex => qr/^\d+\z/,
-    description => "A number of lines to read from the servers response. This option only has an effect if the option 'Match string' is set."
+    description => join(" ",
+        "A number of lines to read from the servers response.",
+        "This option only has an effect if the option 'Match string' is set."
+    )
 );
 
 $plugin->add_option(
@@ -90,13 +97,21 @@ $plugin->add_option(
     value => "regex",
     multiple => 1,
     value_type => "string",
-    description => "A string that is expected in the response of the server. If the string is not found then a critical status is triggered. It's possible to add multiple string that are expected, from which only one must be present in the response."
+    description => join(" ",
+        "A string that is expected in the response of the server.",
+        "If the string is not found then a critical status is triggered.",
+        "It's possible to add multiple string that are expected,",
+        "from which only one must be present in the response."
+    )
 );
 
 $plugin->add_option(
     name => "Match all strings",
     option => "match-all",
-    description => "Expect all strings in the server response. The default is that only one string has to be present."
+    description => join(" ",
+        "Expect all strings in the server response.",
+        "The default is that only one string has to be present."
+    )
 );
 
 $plugin->add_option(
@@ -106,7 +121,11 @@ $plugin->add_option(
     value_type => "string",
     default => "CRITICAL",
     regex => qr/^(OK|WARNING|CRITICAL)\z/i,
-    description => "Which status should be returned if the expected strings are not present. Please set on of the following states: OK, WARNING or CRITICAL"
+    description => join(" ",
+        "Which status should be returned if the expected strings are",
+        "not present. Please set on of the following states:",
+        "OK, WARNING or CRITICAL"
+    )
 );
 
 $plugin->add_option(
@@ -114,7 +133,10 @@ $plugin->add_option(
     option => "quit",
     value => "string",
     value_type => "string",
-    description => "A single string to send to the server to close the connection."
+    description => join(" ",
+        "A single string to send to the server to close",
+        "the connection."
+    )
 );
 
 $plugin->has_debug;
@@ -127,7 +149,9 @@ my $opt = $plugin->parse_options;
 $opt->{mismatch} = uc $opt->{mismatch};
 
 my $sockmod = undef;
-my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
+my $ipaddr = $plugin->get_ip_by_hostname(
+    $plugin->ip_version, $opt->{host}
+);
 
 if ($opt->{use_ssl}) {
     require IO::Socket::SSL;
