@@ -1,6 +1,8 @@
 bloonix-plugins-basic (0.45) released at 2015-XX-XX
 
     * Improved check-http and do kill curl if max bytes is reached.
+    * check-tcp now return CRITICAL instead UNKNOWN if the connection
+      fails to ip:port.
 
 bloonix-plugins-basic (0.44) released at 2015-09-15
 

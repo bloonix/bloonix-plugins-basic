@@ -66,8 +66,8 @@ $plugin->example(
 
 $plugin->example(
     description => join(" ",
-        "The following set of options would check the expiration date of a certificate.",
-        "The format is 'days,days'.",
+        "The following set of options would check the expiration date of a",
+        "certificate. The format is 'days,days'.",
         "If the first number of days is exceeded the status WARNING is returned.",
         "If the second number of days is exceeded the status CRITICAL is returned."
     ),
@@ -91,7 +91,10 @@ $plugin->add_option(
         }
     },
     regex => qr@^https{0,1}://[^']+/[^\s']*\z@,
-    description => "This is the HTTP or HTTPS request you want to check. Please enter the full URL with the query string.",
+    description => join(" ",
+        "This is the HTTP or HTTPS request you want to check.",
+        "Please enter the full URL with the query string."
+    ),
     example => "http://www.bloonix.de/"
 );
 
@@ -100,7 +103,10 @@ $plugin->add_option(
     option => "match-header",
     value => "regex",
     value_type => "string",
-    description => "A text string that is expected in the HTTP header. If the text string is not present then a critical status is returned.",
+    description => join(" ",
+        "A text string that is expected in the HTTP header.",
+        "If the text string is not present then a critical status is returned."
+    ),
     example => "^HTTP/1.1 200 OK"
 );
 
@@ -109,7 +115,13 @@ $plugin->add_option(
     option => "match",
     value => "regex",
     value_type => "string",
-    description => "A text string that is expected in the HTTP content. It is recommended to check the content because it's possible that the webserver responses is a blank site but an successful http return code. If the text string is not present then a critical status is returned.",
+    description => join(" ",
+        "A text string that is expected in the HTTP content.",
+        "It is recommended to check the content because it's",
+        "possible that the webserver responses is a blank site",
+        "but an successful http return code. If the text string",
+        "is not present then a critical status is returned."
+    ),
     example => "Impress"
 );
 
@@ -118,7 +130,10 @@ $plugin->add_option(
     option => "match-error",
     value => "regex",
     value_type => "string",
-    description => "A text string that is not expected in the HTTP content. If the string is present then a critical status is returned."
+    description => join(" ",
+        "A text string that is not expected in the HTTP content.",
+        "If the string is present then a critical status is returned."
+    )
 );
 
 $plugin->has_warning(default => 3);
@@ -130,7 +145,11 @@ $plugin->add_option(
     option => "host",
     value => "ipaddr",
     value_type => "string",
-    description => "A IP address to force the check to connect to. This is very useful if your web page runs behind a loadbalancer and if you want to check a specific IP address."
+    description => join(" ",
+        "A IP address to force the check to connect to. This is very",
+        "useful if your web page runs behind a loadbalancer and if you",
+        "want to check a specific IP address."
+    )
 );
 
 $plugin->has_use_ipv6;
@@ -141,7 +160,10 @@ $plugin->add_option(
     option => "data",
     value => "data",
     value_type => "string",
-    description => "Data you want to send as post data to the webserver. The data should be formatted in the way the webserver expects the data."
+    description => join(" ",
+        "Data you want to send as post data to the webserver. The data",
+        "should be formatted in the way the webserver expects the data."
+    )
 );
 
 $plugin->add_option(
@@ -150,7 +172,12 @@ $plugin->add_option(
     value => "warning-days,critical-days",
     value_type => "string",
     regex => qr/^\d+,\d+\z/,
-    description => "Check the expiration date of a certificate. As value the number of days are set before the certificate will expire. The format is 'days,days' where the first number of days is the warning threshold and the second number of days is the critical threshold.",
+    description => join(" ",
+        "Check the expiration date of a certificate. As value the number",
+        "of days are set before the certificate will expire. The format is",
+        "'days,days' where the first number of days is the warning",
+        "threshold and the second number of days is the critical threshold."
+    ),
     example => "7,3"
 );
 
@@ -183,13 +210,6 @@ $plugin->add_option(
     description => "Print the http header and content to stderr for debugging.",
     command_line_only => 1
 );
-
-#$plugin->add_option(
-#    name => "Curl <7.21.3",
-#    option => "old-curl",
-#    description => "Use this option if an older version of curl (<7.21.3) is installed on your server.",
-#    command_line_only => 1
-#);
 
 # --------------------------------------------------
 # Post check
@@ -236,21 +256,11 @@ if ($opt->{url} =~ m!^(https{0,1})://(.+?)(?:/|$)!) {
     );
 }
 
-$host =~ s/:(\d+)\z//;
+#$host =~ s/:(\d+)\z//;
 $ipaddr = $plugin->get_ip_by_hostname($ipv, $opt->{host} || $host);
 $plugin->result->{debug}->{ipaddr} = $ipaddr;
-
-#if ($opt->{old_curl}) {
-#    if ($opt->{use_ipv6}) {
-#        $opt->{url} =~ s!^$proto://$host!$proto://[$ipaddr]!;
-#    } else {
-#        $opt->{url} =~ s!^$proto://$host!$proto://$ipaddr!;
-#    }
-#}
-
 $opt->{host} = $host;
 
-# For waitpid() after eval{}.
 my $chld_in = Symbol::gensym();
 my $chld_out = Symbol::gensym();
 my $chld_err = Symbol::gensym();
@@ -280,10 +290,6 @@ eval {
         "--verbose",
         "--resolve '$host:$port:$ipaddr'"
     );
-
-    #if (!$opt->{old_curl}) {
-    #    $curl .= " --resolve '$host:$port:$ipaddr'";
-    #}
 
     if ($opt->{user_agent}) {
         $curl .= " -A '$opt->{user_agent}'";
@@ -362,7 +368,7 @@ eval {
 };
 
 # At first $pid will be checked and if eval{} runs on a
-# timeout then it's better to send a kill 9 signal to
+# timeout then it's better to send a kill signal to
 # the curl process, otherwise curl could hangs forever.
 # If the eval{} context doesn't run on a timeout then
 # the returncode of waitpid() is checked.
@@ -500,7 +506,7 @@ if ($opt->{certificate}) {
         $critdate = sprintf("%04d%02d%02d", $crityear, $critmonth, $critday);
     }
 
-    if ($stderr =~ /expire\s+date:\s+(2\d\d\d)-(\d\d)-(\d\d)\s/) {
+    if ($stderr =~ /expire\s+date:\s+(\d\d\d\d)-(\d\d)-(\d\d)\s/) {
         $certdate = sprintf("%04d/%02d/%02d", $1, $2, $3);
         $numdate  = "$1$2$3";
 

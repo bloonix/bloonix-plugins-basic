@@ -177,8 +177,14 @@ $plugin->eval(
             print "connect to $opt->{host} $opt->{port}\n";
         }
 
-        my $sock = $sockmod->new(%options)
-            or die "unable to connect to $opt->{host}:$opt->{port}\n";
+        my $sock = $sockmod->new(%options);
+
+        if (!$sock) {
+            $plugin->exit(
+                status => "CRITICAL",
+                message => "unable to connect to $opt->{host}:$opt->{port}\n"
+            );
+        }
 
         if (@{$opt->{send}}) {
             foreach my $str (@{$opt->{send}}) {
