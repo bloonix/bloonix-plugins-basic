@@ -206,7 +206,7 @@ $plugin->eval(
         if (!$sock) {
             $plugin->exit(
                 status => "CRITICAL",
-                message => "unable to connect to $opt->{host}:$opt->{port}\n"
+                message => "unable to connect to $opt->{host}:$opt->{port}"
             );
         }
 
