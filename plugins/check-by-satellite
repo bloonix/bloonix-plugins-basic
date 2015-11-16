@@ -341,6 +341,16 @@ sub locations_by_hostname {
 
 sub request {
     my ($self, $location, $command) = @_;
+    my $authkeys = $self->{authkeys};
+    my $authkey;
+
+    if ($location->{authkey}) {
+        $authkey = $location->{authkey};
+    } elsif ($authkeys->{$location->{hostname}}) {
+        $authkey = $authkeys->{$location->{hostname}};
+    } else {
+        $authkey = $self->{authkey};
+    }
 
     $self->log->info("send request to location $location->{hostname}");
     my $response;
@@ -353,7 +363,7 @@ sub request {
         if ($sock) {
             $sock->send({
                 action => "exec",
-                authkey => $self->{authkey},
+                authkey => $authkey,
                 data => $command
             });
             $response = $sock->recv;
@@ -464,8 +474,15 @@ $plugin->add_option(
     option => "authkey",
     value => "Authentification string",
     value_type => "string",
+    description => "A string to authentificate against the satellite."
+);
+
+$plugin->add_option(
+    option => "authkeys",
+    value => "Authentification string for multiple satellites",
+    value_type => "hash",
     description => "A string to authentificate against the satellite.",
-    mandatory => 1
+    authkeys => {}
 );
 
 $plugin->add_option(
