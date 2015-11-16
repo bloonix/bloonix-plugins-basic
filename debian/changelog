@@ -1,3 +1,13 @@
+bloonix-plugins-basic (0.45-1) unstable; urgency=low
+
+    * Improved check-http and do kill curl if max bytes is reached.
+    * check-tcp now return CRITICAL instead UNKNOWN if the connection
+      fails to ip:port.
+    * Check-By-Satellite now accespt multiple authkeys.
+    * Fixed parsing ping output.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 16 Nov 2015 13:23:48 +0100
+
 bloonix-plugins-basic (0.44-1) unstable; urgency=low
 
     * Added the new plugin Bloonix.Satellite.Check.

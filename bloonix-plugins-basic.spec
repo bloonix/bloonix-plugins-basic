@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.44
+Version: 0.45
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,12 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Mon Nov 16 2015 Jonny Schulz <js@bloonix.de> - 0.45-1
+- Improved check-http and do kill curl if max bytes is reached.
+- check-tcp now return CRITICAL instead UNKNOWN if the connection
+  fails to ip:port.
+- Check-By-Satellite now accespt multiple authkeys.
+- Fixed parsing ping output.
 * Wed Sep 16 2015 Jonny Schulz <js@bloonix.de> - 0.44-1
 - Added the new plugin Bloonix.Satellite.Check.
 * Mon Aug 24 2015 Jonny Schulz <js@bloonix.de> - 0.43-1
