@@ -506,25 +506,47 @@ if ($opt->{certificate}) {
         $critdate = sprintf("%04d%02d%02d", $crityear, $critmonth, $critday);
     }
 
-    if ($stderr =~ /expire\s+date:\s+(\d\d\d\d)-(\d\d)-(\d\d)\s/) {
-        $certdate = sprintf("%04d/%02d/%02d", $1, $2, $3);
-        $numdate  = "$1$2$3";
+    my ($y, $m, $d);
 
-        if ($curdate > $numdate) {
-            $expired = 4;
-        } elsif ($critsecs && $critdate >= $numdate) {
-            $expired = 3;
-        } elsif ($warndate >= $numdate) {
-            $expired = 2;
-        } else {
-            $expired = 1;
-        }
+    # 2015-04-05 04:42:24 GMT
+    if ($stderr =~ /expire\s+date:\s+(\d\d\d\d)-(\d\d)-(\d\d)\s/) {
+        ($y, $m, $d) = ($1, $2, $3);
+
+    # Wed, 21 Jun 2017 12:00:00 GMT
+    } elsif ($stderr =~ /expire\s+date:\s+\w+,\s+(\d\d)\s+([A-Z][a-z]{2})\s+(\d\d\d\d)\s/) {
+        ($y, $m, $d) = ($3, $2, $1)
+
+    # Apr 05 04:42:24 2015 GMT
+    } elsif ($stderr =~ /expire\s+date:\s+([A-Z][a-z]{2})\s+(\d\d)\s+\d\d:\d\d:\d\d\s+(\d\d\d\d)\s/) {
+        ($y, $m, $d) = ($3, $1, $2)
+
+    # The expire date of the certificate couldn't be parsed
     } else {
-        # If this happends then the regex must me updated.
         $plugin->exit(
             status => "UNKNOWN",
             message => "unable to parse expire date of the ssl certificate, IP: $ipaddr"
         );
+    }
+
+    if ($m !~ /\d/) {
+        my %mtn = qw(Jan 01 Feb 02 Mar 03 Apr 04 May 05 Jun 06 Jul 07 Aug 08 Sep 09 Oct 10 Nov 11 Dec 12);
+        $m = $mtn{$m} or $plugin->exit(
+            status => "UNKNOWN",
+            message => "unable to parse the month name of the expire date of the ssl certificate, IP: $ipaddr"
+        );
+    }
+
+    $certdate = sprintf("%04d/%02d/%02d", $y, $m, $d);
+    $numdate = sprintf("%04d%02d%02d", $y, $m, $d);
+
+    if ($curdate > $numdate) {
+        $expired = 4;
+    } elsif ($critsecs && $critdate >= $numdate) {
+        $expired = 3;
+    } elsif ($warndate >= $numdate) {
+        $expired = 2;
+    } else {
+        $expired = 1;
     }
 }
 

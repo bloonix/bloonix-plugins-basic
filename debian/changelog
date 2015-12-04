@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.46-1) unstable; urgency=low
+
+    * Fixed parsing SSL certificate expire date in check-http.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 04 Dec 2015 17:46:34 +0100
+
 bloonix-plugins-basic (0.45-1) unstable; urgency=low
 
     * Improved check-http and do kill curl if max bytes is reached.

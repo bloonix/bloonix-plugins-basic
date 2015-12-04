@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.45
+Version: 0.46
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Fri Dec 04 2015 Jonny Schulz <js@bloonix.de> - 0.46-1
+- Fixed parsing SSL certificate expire date in check-http.
 * Mon Nov 16 2015 Jonny Schulz <js@bloonix.de> - 0.45-1
 - Improved check-http and do kill curl if max bytes is reached.
 - check-tcp now return CRITICAL instead UNKNOWN if the connection
