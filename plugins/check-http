@@ -47,7 +47,7 @@ use constant MAX_READ_LEN => 10_485_760;
 
 my $plugin = Bloonix::Plugin->new();
 
-$plugin->version("0.14");
+$plugin->version("0.15");
 
 $plugin->example(
     description => join(" ",
@@ -99,6 +99,18 @@ $plugin->add_option(
 );
 
 $plugin->add_option(
+    name => "IP address",
+    option => "host",
+    value => "ipaddr",
+    value_type => "string",
+    description => join(" ",
+        "A IP address to force the check to connect to. This is very",
+        "useful if your web page runs behind a loadbalancer and if you",
+        "want to check a specific IP address."
+    )
+);
+
+$plugin->add_option(
     name => "Check a string in the HTTP header",
     option => "match-header",
     value => "regex",
@@ -139,19 +151,6 @@ $plugin->add_option(
 $plugin->has_warning(default => 3);
 $plugin->has_critical(default => 5);
 $plugin->has_timeout(default => 10);
-
-$plugin->add_option(
-    name => "IP address",
-    option => "host",
-    value => "ipaddr",
-    value_type => "string",
-    description => join(" ",
-        "A IP address to force the check to connect to. This is very",
-        "useful if your web page runs behind a loadbalancer and if you",
-        "want to check a specific IP address."
-    )
-);
-
 $plugin->has_use_ipv6;
 $plugin->has_auth_basic;
 
