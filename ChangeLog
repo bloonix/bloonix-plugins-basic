@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.47) released at 2015-12-16
+
+    * Just changed the option order of check-http.
+
 bloonix-plugins-basic (0.46) released at 2015-12-04
 
     * Fixed parsing SSL certificate expire date in check-http.

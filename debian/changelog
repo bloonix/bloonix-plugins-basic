@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.47-1) unstable; urgency=low
+
+    * Just changed the option order of check-http.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 16 Dec 2015 20:23:42 +0100
+
 bloonix-plugins-basic (0.46-1) unstable; urgency=low
 
     * Fixed parsing SSL certificate expire date in check-http.

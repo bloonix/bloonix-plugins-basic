@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.46
+Version: 0.47
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Wed Dec 16 2015 Jonny Schulz <js@bloonix.de> - 0.47-1
+- Just changed the option order of check-http.
 * Fri Dec 04 2015 Jonny Schulz <js@bloonix.de> - 0.46-1
 - Fixed parsing SSL certificate expire date in check-http.
 * Mon Nov 16 2015 Jonny Schulz <js@bloonix.de> - 0.45-1
