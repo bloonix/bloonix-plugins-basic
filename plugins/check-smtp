@@ -167,7 +167,14 @@ $plugin->eval(
             Timeout => $opt->{timeout},
             Hello   => $helo,
             Debug   => $opt->{debug},
-        ) or die "connect error - $@";
+        );
+
+        if (!$smtp) {
+            $plugin->exit(
+                status => "CRITICAL",
+                message => "connect error - $@",
+            );
+        }
 
         if ($opt->{username} && $opt->{password}) {
             $smtp->auth($opt->{username}, $opt->{password})
