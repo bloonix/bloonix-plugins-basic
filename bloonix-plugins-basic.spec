@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.47
+Version: 0.48
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Tue Dec 29 2015 Jonny Schulz <js@bloonix.de> - 0.48-1
+- Fixed: check-smtp now returns status CRITICAL instead of UNKNOWN
+  if the connection to the target host is refused.
 * Wed Dec 16 2015 Jonny Schulz <js@bloonix.de> - 0.47-1
 - Just changed the option order of check-http.
 * Fri Dec 04 2015 Jonny Schulz <js@bloonix.de> - 0.46-1

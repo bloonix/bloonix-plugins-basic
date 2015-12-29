@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.48-1) unstable; urgency=low
+
+    * Fixed: check-smtp now returns status CRITICAL instead of UNKNOWN
+      if the connection to the target host is refused.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 29 Dec 2015 18:09:57 +0100
+
 bloonix-plugins-basic (0.47-1) unstable; urgency=low
 
     * Just changed the option order of check-http.
