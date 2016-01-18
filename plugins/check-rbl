@@ -114,7 +114,7 @@ my (@timeout, @listed);
 
 foreach my $server (@{$opt->{server}}) {
     if ($opt->{debug}) {
-        print STDERR "check $reverse_ip.$server";
+        print STDERR "check $reverse_ip.$server\n";
     }
 
     eval {
@@ -122,6 +122,17 @@ foreach my $server (@{$opt->{server}}) {
         $SIG{ALRM} = sub { die "timeout" };
         alarm($opt->{timeout});
         my ($name, $aliases, $addrtype, $length, @addrs) = gethostbyname($reverse_ip .".". $server);
+
+        if ($opt->{debug}) {
+            require Data::Dumper;
+            print STDERR Data::Dumper::Dumper({
+                name => $name,
+                aliases => $aliases,
+                addrtype => $addrtype,
+                length => $length,
+                addrs => \@addrs
+            });
+        }
 
         if ($name) {
             my @addr = unpack("C4", $addrs[0]);
