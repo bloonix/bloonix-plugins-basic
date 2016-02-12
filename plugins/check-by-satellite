@@ -117,7 +117,7 @@ sub check_multiple {
 
     my $return = { status => "UNKNOWN" };
     my $count_locations = 0;
-    my $status_count = {};
+    my $status_count = { UNKNOWN => 0, CRITICAL => 0, WARNING => 0, OK => 0 };
     my @result = ();
 
     foreach my $result (@finish) {
@@ -194,6 +194,14 @@ sub check_multiple {
         }
     }
 
+    if ($status_count->{CRITICAL} + $status_count->{WARNING} >= 3) {
+        if ($status_count->{CRITICAL}) {
+            $return->{status} = "CRITICAL";
+        } else {
+            $return->{status} = "WARNING";
+        }
+    }
+
     return $return;
 }
 
@@ -236,7 +244,10 @@ sub failover_checks {
             push @debug, $result->{debug};
         }
 
-        if (!$lowest_status || $self->exitcode->{ $result->{status} } < $self->exitcode->{ $lowest_status->{status} }) {
+        my $res_exit_status = $self->exitcode->{ $result->{status} };
+        my $low_exit_status = $self->exitcode->{ $lowest_status->{status} };
+
+        if (!$lowest_status || $res_exit_status < $low_exit_status) {
             $lowest_status = $result;
         }
 
