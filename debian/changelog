@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.49-1) unstable; urgency=low
+
+    * Fixed: check-by-satellite return now a CRITICAL/WARNING state
+      if more or equal 3 locations returns a CRITICAL/WARNING state.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 12 Feb 2016 12:55:51 +0100
+
 bloonix-plugins-basic (0.48-1) unstable; urgency=low
 
     * Fixed: check-smtp now returns status CRITICAL instead of UNKNOWN

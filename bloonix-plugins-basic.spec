@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.48
+Version: 0.49
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Fri Feb 12 2016 Jonny Schulz <js@bloonix.de> - 0.49-1
+- Fixed: check-by-satellite return now a CRITICAL/WARNING state
+  if more or equal 3 locations returns a CRITICAL/WARNING state.
 * Tue Dec 29 2015 Jonny Schulz <js@bloonix.de> - 0.48-1
 - Fixed: check-smtp now returns status CRITICAL instead of UNKNOWN
   if the connection to the target host is refused.

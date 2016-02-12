@@ -195,7 +195,7 @@ sub check_multiple {
     }
 
     if ($status_count->{CRITICAL} + $status_count->{WARNING} >= 3) {
-        if ($status_count->{CRITICAL}) {
+        if ($status_count->{CRITICAL} > $status_count->{WARNING} || $status_count->{WARNING} == 0) {
             $return->{status} = "CRITICAL";
         } else {
             $return->{status} = "WARNING";
@@ -244,10 +244,14 @@ sub failover_checks {
             push @debug, $result->{debug};
         }
 
+        if (!$lowest_status) {
+            $lowest_status = $result;
+        }
+
         my $res_exit_status = $self->exitcode->{ $result->{status} };
         my $low_exit_status = $self->exitcode->{ $lowest_status->{status} };
 
-        if (!$lowest_status || $res_exit_status < $low_exit_status) {
+        if ($res_exit_status < $low_exit_status) {
             $lowest_status = $result;
         }
 
