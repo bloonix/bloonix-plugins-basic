@@ -1,3 +1,8 @@
+bloonix-plugins-basic (0.50) released at 2016-03-02
+
+    * check-logfile: it's possible to set a option to permit
+      non existent logfiles.
+
 bloonix-plugins-basic (0.49) released at 2016-02-12
 
     * Fixed: check-by-satellite return now a CRITICAL/WARNING state

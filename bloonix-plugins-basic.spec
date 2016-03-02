@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.49
+Version: 0.50
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Wed Mar 02 2016 Jonny Schulz <js@bloonix.de> - 0.50-1
+- check-logfile: it's possible to set a option to permit
+  non existent logfiles.
 * Fri Feb 12 2016 Jonny Schulz <js@bloonix.de> - 0.49-1
 - Fixed: check-by-satellite return now a CRITICAL/WARNING state
   if more or equal 3 locations returns a CRITICAL/WARNING state.

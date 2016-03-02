@@ -39,7 +39,7 @@ use Bloonix::Plugin;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(version => "0.12");
+my $plugin = Bloonix::Plugin->new(version => "0.13");
 
 $plugin->example(
     description => [
@@ -112,6 +112,12 @@ $plugin->add_option(
     description => "Enable this option if the check should automatically search rotated log files in the format 'logfile.1'."
 );
 
+$plugin->add_option(
+    name => "Permit non existent file",
+    option => "permit-non-existent",
+    description => "It's allowed if the logfile doesn't exist. Otherwise a WARNING is triggered."
+);
+
 $plugin->one_must_have_options("warning", "critical");
 
 # --------------------------------------------------
@@ -145,13 +151,13 @@ if (!exists $allowed_logfiles{ $opt->{logfile} }) {
 if (!-e $opt->{logfile}) {
     if ($opt->{rotated_file} && -e "$opt->{logfile}.1") {
         $opt->{logfile} = "$opt->{logfile}.1";
+    } else {
+        $plugin->exit(
+            status => $opt->{permit_non_existent} ? "OK" : "WARNING",
+            message => "the logfile currently does not exists",
+            stats => { warning => 0, critical => 0 }
+        );
     }
-
-    $plugin->exit(
-        status => "WARNING",
-        message => "the logfile currently does not exists",
-        stats => { warning => 0, critical => 0 }
-    );
 }
 
 # --------------------------------------------------
