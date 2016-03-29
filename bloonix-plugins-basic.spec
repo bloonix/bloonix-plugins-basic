@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.50
+Version: 0.51
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Tue Mar 29 2016 Jonny Schulz <js@bloonix.de> - 0.51-1
+- Extra release because the gpg key of bloonix is updated.
 * Wed Mar 02 2016 Jonny Schulz <js@bloonix.de> - 0.50-1
 - check-logfile: it's possible to set a option to permit
   non existent logfiles.

@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.51-1) unstable; urgency=low
+
+    * Extra release because the gpg key of bloonix is updated.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 29 Mar 2016 02:45:49 +0200
+
 bloonix-plugins-basic (0.50-1) unstable; urgency=low
 
     * check-logfile: it's possible to set a option to permit
