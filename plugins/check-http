@@ -563,15 +563,15 @@ if ($opt->{critical} && $time >= $opt->{critical}) {
     push @events, "warning threshold of $opt->{warning}s exceeded";
 }
 
-if ($opt->{match_header} && $header !~ /$opt->{match_header}/) {
+if (defined $opt->{match_header} && length $opt->{match_header} && $header !~ /$opt->{match_header}/) {
     push @events, "header mismatch";
     $mismatch = 1;
-} elsif ($opt->{match} && $content !~ /$opt->{match}/) {
+} elsif (defined $opt->{match} && length $opt->{match} && $content !~ /$opt->{match}/) {
     push @events, "content mismatch";
     $mismatch = 1;
 }
 
-if ($opt->{match_error} && $content =~ /$opt->{match_error}/) {
+if (defined $opt->{match_error} && length $opt->{match_error} && $content =~ /$opt->{match_error}/) {
     push @events, "error match found '$opt->{match_error}' in content";
     $mismatch = 1;
 }

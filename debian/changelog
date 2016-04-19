@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.52-1) unstable; urgency=low
+
+    * Fixed check-http matching options.
+
+ -- Jonny Schulz <js@bloonix.de>  Tue, 19 Apr 2016 20:58:43 +0200
+
 bloonix-plugins-basic (0.51-1) unstable; urgency=low
 
     * Extra release because the gpg key of bloonix is updated.
