@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.53) released at 2016-04-24
+
+    * Decresed the execution time of check-by-satellite from 60 to 30s.
+
 bloonix-plugins-basic (0.52) released at 2016-04-19
 
     * Fixed check-http matching options.

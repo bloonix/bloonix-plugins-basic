@@ -369,21 +369,27 @@ sub request {
 
     $self->log->info("send request to location $location->{hostname}");
     my $response;
+    my $sock;
+
+    eval { $sock = $self->connect($location) };
+
+    if ($@) {
+        $self->log->error($@);
+        print STDERR $@;
+        return undef;
+    }
 
     eval {
         $SIG{__DIE__} = sub { alarm(0) };
         $SIG{ALRM} = sub { die "timeout" };
-        alarm(60);
-        my $sock = $self->connect($location);
-        if ($sock) {
-            $sock->send({
-                action => "exec",
-                authkey => $authkey,
-                data => $command
-            });
-            $response = $sock->recv;
-            $sock->disconnect;
-        }
+        alarm(30);
+        $sock->send({
+            action => "exec",
+            authkey => $authkey,
+            data => $command
+        });
+        $response = $sock->recv;
+        $sock->disconnect;
         alarm(0);
     };
 
@@ -415,7 +421,7 @@ sub connect {
 
     my $socket = Bloonix::IO::SIPC->new(\%opts);
 
-    if (!$socket->connect) {
+    if (!$socket->connect(10)) {
         die $socket->errstr;
     }
 
