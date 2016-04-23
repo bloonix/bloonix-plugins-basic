@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.53-1) unstable; urgency=low
+
+    * Decresed the execution time of check-by-satellite from 60 to 30s.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 24 Apr 2016 00:18:08 +0200
+
 bloonix-plugins-basic (0.52-1) unstable; urgency=low
 
     * Fixed check-http matching options.

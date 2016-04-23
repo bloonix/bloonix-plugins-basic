@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.52
+Version: 0.53
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Sun Apr 24 2016 Jonny Schulz <js@bloonix.de> - 0.53-1
+- Decresed the execution time of check-by-satellite from 60 to 30s.
 * Tue Apr 19 2016 Jonny Schulz <js@bloonix.de> - 0.52-1
 - Fixed check-http matching options.
 * Tue Mar 29 2016 Jonny Schulz <js@bloonix.de> - 0.51-1
