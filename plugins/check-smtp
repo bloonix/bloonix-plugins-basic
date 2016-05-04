@@ -91,7 +91,7 @@ $plugin->add_option(
     option => "from",
     value => "mail-from",
     value_type => "string",
-    description => "Set this options if you want that a 'MAIL FROM' will be sent."
+    description => "Set this option if you want that a 'MAIL FROM' will be sent."
 );
 
 $plugin->add_option(
@@ -99,7 +99,7 @@ $plugin->add_option(
     option => "to",
     value => "mail-to",
     value_type => "string",
-    description => "Set this options if you want that a 'RCPT TO' will be sent."
+    description => "Set this option if you want that a 'RCPT TO' will be sent."
 );
 
 $plugin->add_option(
