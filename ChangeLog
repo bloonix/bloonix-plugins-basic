@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.54) released at 2016-06-29
+
+    * Fixed detection of 64 bit interfaces in check-snmp-if.
+
 bloonix-plugins-basic (0.53) released at 2016-04-24
 
     * Decresed the execution time of check-by-satellite from 60 to 30s.
