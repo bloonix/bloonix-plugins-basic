@@ -144,11 +144,15 @@ my %if_basics = (
     descr        => "1.3.6.1.2.1.2.2.1.2",
     #speed        => "1.3.6.1.2.1.2.2.1.5",
     admin_status => "1.3.6.1.2.1.2.2.1.7",
-    oper_status  => "1.3.6.1.2.1.2.2.1.8",
+    oper_status  => "1.3.6.1.2.1.2.2.1.8"
+);
+
+# Error counter
+my %if_errors = (
     in_discards  => "1.3.6.1.2.1.2.2.1.13",
     in_errors    => "1.3.6.1.2.1.2.2.1.14",
     out_discards => "1.3.6.1.2.1.2.2.1.19",
-    out_errors   => "1.3.6.1.2.1.2.2.1.20",
+    out_errors   => "1.3.6.1.2.1.2.2.1.20"
 );
 
 # 32 bit counters
@@ -332,8 +336,8 @@ if (!$if) {
 
 my $stat = { };
 
-foreach my $key (keys %if_basics) {
-    my $oid = $if_basics{$key};
+foreach my $key (keys %if_basics, keys %if_errors) {
+    my $oid = $if_basics{$key} ? $if_basics{$key} : $if_errors{$key};
     if (!exists $if_result->{"$oid.$if"}) {
         $plugin->exit(
             status => "UNKOWN",
@@ -368,7 +372,7 @@ $stat->{admin_status} = $if_oper_status->{ $stat->{admin_status} };
 $stat->{oper_status} = $if_oper_status->{ $stat->{oper_status} };
 delete $stat->{descr};
 
-my %delta_keys = (%if_counters, %if_hc_counters);
+my %delta_keys = (%if_counters, %if_hc_counters, %if_errors);
 
 foreach my $key (keys %delta_keys) {
     if (!exists $stat->{$key}) {
