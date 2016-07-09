@@ -127,5 +127,5 @@ if ($opt->{critical} && $opt->{critical} <= $count) {
 $plugin->exit(
     status => $status,
     message => "$count processes running",
-    stat => { count => $count }
+    stats => { count => $count }
 );

@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.54
+Version: 0.56
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,10 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Sun Jul 10 2016 Jonny Schulz <js@bloonix.de> - 0.56-1
+- Fixed: statistic output for check-snmp-nprocs.
+* Mon Jul 04 2016 Jonny Schulz <js@bloonix.de> - 0.55-1
+- Fixed error counter in check-snmp-if.
 * Wed Jun 29 2016 Jonny Schulz <js@bloonix.de> - 0.54-1
 - Fixed detection of 64 bit interfaces in check-snmp-if.
 * Sun Apr 24 2016 Jonny Schulz <js@bloonix.de> - 0.53-1

@@ -1,3 +1,11 @@
+bloonix-plugins-basic (0.56) released at 2016-07-10
+
+    * Fixed: statistic output for check-snmp-nprocs.
+
+bloonix-plugins-basic (0.55) released at 2016-07-04
+
+    * Fixed error counter in check-snmp-if.
+
 bloonix-plugins-basic (0.54) released at 2016-06-29
 
     * Fixed detection of 64 bit interfaces in check-snmp-if.

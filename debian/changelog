@@ -1,3 +1,15 @@
+bloonix-plugins-basic (0.56-1) unstable; urgency=low
+
+    * Fixed: statistic output for check-snmp-nprocs.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 10 Jul 2016 01:25:07 +0200
+
+bloonix-plugins-basic (0.55-1) unstable; urgency=low
+
+    * Fixed error counter in check-snmp-if.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 04 Jul 2016 22:03:59 +0200
+
 bloonix-plugins-basic (0.54-1) unstable; urgency=low
 
     * Fixed detection of 64 bit interfaces in check-snmp-if.
