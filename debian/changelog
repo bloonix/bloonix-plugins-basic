@@ -1,3 +1,10 @@
+bloonix-plugins-basic (0.57-1) unstable; urgency=low
+
+    * Fixed: check the correct hostname in dns response
+      in check-rbl.
+
+ -- Jonny Schulz <js@bloonix.de>  Thu, 14 Jul 2016 16:12:53 +0200
+
 bloonix-plugins-basic (0.56-1) unstable; urgency=low
 
     * Fixed: statistic output for check-snmp-nprocs.

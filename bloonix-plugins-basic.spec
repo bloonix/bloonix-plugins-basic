@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.56
+Version: 0.57
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,9 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Thu Jul 14 2016 Jonny Schulz <js@bloonix.de> - 0.57-1
+- Fixed: check the correct hostname in dns response
+  in check-rbl.
 * Sun Jul 10 2016 Jonny Schulz <js@bloonix.de> - 0.56-1
 - Fixed: statistic output for check-snmp-nprocs.
 * Mon Jul 04 2016 Jonny Schulz <js@bloonix.de> - 0.55-1
