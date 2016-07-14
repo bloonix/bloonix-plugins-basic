@@ -121,7 +121,8 @@ foreach my $server (@{$opt->{server}}) {
         $SIG{__DIE__} = sub { alarm(0) };
         $SIG{ALRM} = sub { die "timeout" };
         alarm($opt->{timeout});
-        my ($name, $aliases, $addrtype, $length, @addrs) = gethostbyname($reverse_ip .".". $server);
+        my $dns_name = $reverse_ip .".". $server;
+        my ($name, $aliases, $addrtype, $length, @addrs) = gethostbyname($dns_name);
 
         if ($opt->{debug}) {
             require Data::Dumper;
@@ -134,7 +135,7 @@ foreach my $server (@{$opt->{server}}) {
             });
         }
 
-        if ($name) {
+        if ($name eq $dns_name) {
             my @addr = unpack("C4", $addrs[0]);
             push @listed, "$server($addr[3])";
             if ($opt->{debug}) {
