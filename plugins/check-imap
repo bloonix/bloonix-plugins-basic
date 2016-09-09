@@ -57,7 +57,12 @@ $plugin->example(
 );
 
 $plugin->example(
-    description => "In combination with the SMTP check of Bloonix it's possible to check a complete send-and-receive workflow. If you configure a SMTP check to send a mail with the subject 'Bloonix test mail' then it's possible to pick this mails with the IMAP check.",
+    description => join(" ",
+        "In combination with the SMTP check of Bloonix it's possible to",
+        "check a complete send-and-receive workflow. If you configure a",
+        "SMTP check to send a mail with the subject 'Bloonix test mail'",
+        "then it's possible to pick this mails with the IMAP check."
+    ),
     arguments => [
         host => "127.0.0.1",
         port => 993,
@@ -144,6 +149,12 @@ $plugin->add_option(
 );
 
 $plugin->add_option(
+    name => "No SSL cert validation",
+    option => "insecure",
+    description => "If this option is set then the SSL certificate will not be verified."
+);
+
+$plugin->add_option(
     name => "Debug",
     option => "debug",
     description => "Turn on debugging. Just useful if you want to test something.",
@@ -216,6 +227,8 @@ my $imap = Bloonix::IMAP->new(
     user => $opt->{username},
     password => $opt->{password},
     delete => "yes",
+    use_ssl => $opt->{use_ssl},
+    insecure => $opt->{insecure},
     debug => $opt->{debug},
 );
 
@@ -354,12 +367,14 @@ if ($opt->{critical} && $runtime >= $opt->{critical}) {
     $status = "WARNING";
 }
 
-if ($opt->{invert_regex}) {
-    $message .= " (no hits)";
-} elsif ($misses_unit ne "c") {
-    $message .= ", last match ago: $last_match_ago";
-} elsif ($opt->{misses} && defined $counter) {
-    $message .= " ($counter/$opt->{misses})";
+if (defined $opt->{search} && length $opt->{search}) {
+    if ($opt->{invert_regex}) {
+        $message .= " (no hits)";
+    } elsif ($misses_unit ne "c") {
+        $message .= ", last match ago: $last_match_ago";
+    } elsif ($opt->{misses} && defined $counter) {
+        $message .= " ($counter/$opt->{misses})";
+    }
 }
 
 $plugin->exit(
@@ -434,8 +449,12 @@ sub connect {
         $options{LocalAddr} = $self->{bind};
     }
 
+    if ($self->{use_ssl} && $self->{insecure}) {
+        $options{SSL_verify_mode} = 0;
+    }
+
     $self->{sock} = $self->{sockmod}->new(%options)
-        or $self->log->die(error => $!);
+        or $self->log->die(error => $@);
 
     $self->log->debug("set autoflush to the socket");
     $self->{sock}->autoflush(1);

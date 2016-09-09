@@ -126,6 +126,12 @@ $plugin->add_option(
     ]
 );
 
+$plugin->add_option(
+    name => "Use SASL NTLM",
+    option => "use-sasl-ntlm",
+    description => "Use SASL NTLM authentification method to login with username and passwword."
+);
+
 $plugin->has_debug;
 
 # --------------------------------------------------
@@ -139,7 +145,10 @@ my $ctype = "text/plain";
 my $helo = Sys::Hostname::hostname;
 my $ipaddr = $plugin->get_ip_by_hostname($plugin->ip_version, $opt->{host});
 
-if ($opt->{use_ssl}) {
+if ($opt->{use_sasl_ntlm}) {
+    require Net::SMTP_auth;
+    $sockmod = "Net::SMTP_auth";
+} elsif ($opt->{use_ssl}) {
     require Net::SMTP::SSL;
     $sockmod = "Net::SMTP::SSL";
 } else {
@@ -177,7 +186,11 @@ $plugin->eval(
         }
 
         if ($opt->{username} && $opt->{password}) {
-            $smtp->auth($opt->{username}, $opt->{password})
+            my @auth = ($opt->{username}, $opt->{password});
+            if ($opt->{use_sasl_ntlm}) {
+                unshift @auth, "NTLM";
+            }
+            $smtp->auth(@auth)
                 or die "unable to login as $opt->{username}\n";
         }
 

@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.57
+Version: 0.58
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Fri Sep 09 2016 Jonny Schulz <js@bloonix.de> - 0.58-1
+- Added support for NTLM in check-smtp.
 * Thu Jul 14 2016 Jonny Schulz <js@bloonix.de> - 0.57-1
 - Fixed: check the correct hostname in dns response
   in check-rbl.

@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.58-1) unstable; urgency=low
+
+    * Added support for NTLM in check-smtp.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 09 Sep 2016 13:16:06 +0200
+
 bloonix-plugins-basic (0.57-1) unstable; urgency=low
 
     * Fixed: check the correct hostname in dns response
