@@ -41,7 +41,7 @@ use Net::SNMP;
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(version => "0.3");
+my $plugin = Bloonix::Plugin->new(version => "0.4");
 
 $plugin->example(
     description => "Monitor the interface eth0 (1.3.6.1.2.1.31.1.1.1.1) of a linux system:",
@@ -249,9 +249,9 @@ if (!$opt->{no_cache} && defined $file_stat->[10] && $file_stat->[10] + 10 >= ti
 } else {
     my $snmp = $plugin->start_snmp_session;
     $snmp->max_msg_size(65535);
-    $if_result = $snmp->get_table($if_base);
-    $if_hc_result = $snmp->get_table($if_hc_base);
-    $if_names = $snmp->get_table($if_name_base);
+    $if_result = $snmp->get_table($if_base, -maxrepetitions => 58);
+    $if_hc_result = $snmp->get_table($if_hc_base, -maxrepetitions => 58);
+    $if_names = $snmp->get_table($if_name_base, -maxrepetitions => 58);
     $time = time;
 
     sysseek $fh, 0, 0;

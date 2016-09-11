@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.59-1) unstable; urgency=low
+
+    * Set -maxrepetitions to 58 in check-snmp-if.
+
+ -- Jonny Schulz <js@bloonix.de>  Sun, 11 Sep 2016 15:25:27 +0200
+
 bloonix-plugins-basic (0.58-1) unstable; urgency=low
 
     * Added support for NTLM in check-smtp.

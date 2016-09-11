@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.59) released at 2016-09-11
+
+    * Set -maxrepetitions to 58 in check-snmp-if.
+
 bloonix-plugins-basic (0.58) released at 2016-09-09
 
     * Added support for NTLM in check-smtp.

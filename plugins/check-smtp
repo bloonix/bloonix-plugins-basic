@@ -41,7 +41,7 @@ use Sys::Hostname qw();
 # Plugin options
 # --------------------------------------------------
 
-my $plugin = Bloonix::Plugin->new(version => "0.9");
+my $plugin = Bloonix::Plugin->new(version => "0.10");
 
 $plugin->example(
     description => "Just a simple SMTP connection to your mail server:",
