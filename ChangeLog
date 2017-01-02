@@ -1,3 +1,7 @@
+bloonix-plugins-basic (0.60) released at 2017-01-02
+
+    * Implemented port number for check-by-satellite.
+
 bloonix-plugins-basic (0.59) released at 2016-09-11
 
     * Set -maxrepetitions to 58 in check-snmp-if.

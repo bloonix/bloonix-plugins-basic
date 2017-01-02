@@ -407,7 +407,7 @@ sub connect {
 
     my %opts = (
         peeraddr => $location->{ipaddr},
-        peerport => 5464,
+        peerport => $location->{port} // 5464,
         use_ssl => "yes",
         ssl_verifycn_name => $location->{hostname},
         recv_timeout => 60

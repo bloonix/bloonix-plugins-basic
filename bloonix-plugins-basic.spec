@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.59
+Version: 0.60
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Mon Jan 02 2017 Jonny Schulz <js@bloonix.de> - 0.60-1
+- Implemented port number for check-by-satellite.
 * Sun Sep 11 2016 Jonny Schulz <js@bloonix.de> - 0.59-1
 - Set -maxrepetitions to 58 in check-snmp-if.
 * Fri Sep 09 2016 Jonny Schulz <js@bloonix.de> - 0.58-1

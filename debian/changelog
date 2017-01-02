@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.60-1) unstable; urgency=low
+
+    * Implemented port number for check-by-satellite.
+
+ -- Jonny Schulz <js@bloonix.de>  Mon, 02 Jan 2017 15:57:35 +0100
+
 bloonix-plugins-basic (0.59-1) unstable; urgency=low
 
     * Set -maxrepetitions to 58 in check-snmp-if.
