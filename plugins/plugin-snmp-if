@@ -189,7 +189,7 @@ chart {
     id 3
     title SNMP if - multicast, broadcast
     options {
-        ylabel packets in(+) / out(-)
+        ylabel packets
         units default
         chart-type area
         series {
@@ -211,22 +211,18 @@ chart {
         series {
             name out_ucast_pkts
             color \#ffb244
-            opposite true
         }
         series {
             name out_nucast_pkts
             color \#9a72ad
-            opposite true
         }
         series {
             name out_multicast_pkts
             color \#005467
-            opposite true
         }
         series {
             name out_broadcast_pkts
             color \#e9644a
-            opposite true
         }
     }
 }

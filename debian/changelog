@@ -1,3 +1,9 @@
+bloonix-plugins-basic (0.61-1) unstable; urgency=low
+
+    * Fixed stacked charts with negative values.
+
+ -- Jonny Schulz <js@bloonix.de>  Wed, 25 Jan 2017 19:03:12 +0100
+
 bloonix-plugins-basic (0.60-1) unstable; urgency=low
 
     * Implemented port number for check-by-satellite.

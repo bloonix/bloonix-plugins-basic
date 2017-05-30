@@ -1,3 +1,11 @@
+bloonix-plugins-basic (0.62) released at 2017-05-30
+
+    * Fixed uninitialized variable $name in check-rbl.
+
+bloonix-plugins-basic (0.61) released at 2017-01-25
+
+    * Fixed stacked charts with negative values.
+
 bloonix-plugins-basic (0.60) released at 2017-01-02
 
     * Implemented port number for check-by-satellite.

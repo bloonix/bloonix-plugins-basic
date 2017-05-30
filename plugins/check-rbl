@@ -42,7 +42,7 @@ use Bloonix::Plugin;
 my $config_file = "/etc/bloonix/agent/check-rbl.conf";
 my $plugin = Bloonix::Plugin->new();
 
-$plugin->version("0.1");
+$plugin->version("0.2");
 $plugin->flags("mid-check-frequency");
 
 $plugin->example(
@@ -135,7 +135,7 @@ foreach my $server (@{$opt->{server}}) {
             });
         }
 
-        if ($name eq $dns_name) {
+        if (defined $name && $name eq $dns_name) {
             my @addr = unpack("C4", $addrs[0]);
             push @listed, "$server($addr[3])";
             if ($opt->{debug}) {
