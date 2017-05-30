@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.61
+Version: 0.62
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,8 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Tue May 30 2017 Jonny Schulz <js@bloonix.de> - 0.62-1
+- Fixed uninitialized variable $name in check-rbl.
 * Wed Jan 25 2017 Jonny Schulz <js@bloonix.de> - 0.61-1
 - Fixed stacked charts with negative values.
 * Mon Jan 02 2017 Jonny Schulz <js@bloonix.de> - 0.60-1
