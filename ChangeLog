@@ -1,3 +1,11 @@
+bloonix-plugins-basic (0.64) released at 2017-06-23
+
+    * check-snmp-mem: fixed kilobytes -> bytes.
+
+bloonix-plugins-basic (0.63) released at 2017-06-09
+
+    * check-http: added new parameter --http-header.
+
 bloonix-plugins-basic (0.62) released at 2017-05-30
 
     * Fixed uninitialized variable $name in check-rbl.

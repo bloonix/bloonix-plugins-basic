@@ -47,7 +47,7 @@ use constant MAX_READ_LEN => 10_485_760;
 
 my $plugin = Bloonix::Plugin->new();
 
-$plugin->version("0.15");
+$plugin->version("0.16");
 
 $plugin->example(
     description => join(" ",
@@ -190,6 +190,16 @@ $plugin->add_option(
 );
 
 $plugin->add_option(
+    name => "HTTP Header",
+    option => "http-header",
+    value => "http-header",
+    value_type => "string",
+    multiple => 1,
+    optional => 1,
+    description => "Set header parameter for the http request."
+);
+
+$plugin->add_option(
     name => "Verbose status",
     option => "verbose-status",
     description => "Add the http header and content to status output."
@@ -289,6 +299,12 @@ eval {
         "--verbose",
         "--resolve '$host:$port:$ipaddr'"
     );
+
+    if ($opt->{http_header}) {
+        foreach my $head (@{$opt->{http_header}}) {
+            $curl .= " -H '$head'";
+        }
+    }
 
     if ($opt->{user_agent}) {
         $curl .= " -A '$opt->{user_agent}'";

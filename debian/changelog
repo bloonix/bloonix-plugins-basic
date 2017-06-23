@@ -1,3 +1,15 @@
+bloonix-plugins-basic (0.64-1) unstable; urgency=low
+
+    * check-snmp-mem: fixed kilobytes -> bytes.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 23 Jun 2017 12:59:23 +0200
+
+bloonix-plugins-basic (0.63-1) unstable; urgency=low
+
+    * check-http: added new parameter --http-header.
+
+ -- Jonny Schulz <js@bloonix.de>  Fri, 09 Jun 2017 19:16:29 +0200
+
 bloonix-plugins-basic (0.62-1) unstable; urgency=low
 
     * Fixed uninitialized variable $name in check-rbl.

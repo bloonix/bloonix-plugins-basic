@@ -100,13 +100,13 @@ sub get_linux_mem_usage {
     my $oid_linux_cached = "1.3.6.1.4.1.2021.4.15.0";
 
     my $mem = {
-        memtotal => $mem_linux_base->{$oid_linux_mem_total},
-        memfree => $mem_linux_base->{$oid_linux_mem_free},
-        buffers => $mem_linux_base->{$oid_linux_buffers},
-        cached => $mem_linux_base->{$oid_linux_cached},
-        swaptotal => $mem_linux_base->{$oid_linux_swap_total},
-        swapused => $mem_linux_base->{$oid_linux_swap_total} - $mem_linux_base->{$oid_linux_swap_free},
-        swapfree => $mem_linux_base->{$oid_linux_swap_free}
+        memtotal => $mem_linux_base->{$oid_linux_mem_total} * 1024,
+        memfree => $mem_linux_base->{$oid_linux_mem_free} * 1024,
+        buffers => $mem_linux_base->{$oid_linux_buffers} * 1024,
+        cached => $mem_linux_base->{$oid_linux_cached} * 1024,
+        swaptotal => $mem_linux_base->{$oid_linux_swap_total} * 1024,
+        swapused => ($mem_linux_base->{$oid_linux_swap_total} - $mem_linux_base->{$oid_linux_swap_free}) * 1024,
+        swapfree => $mem_linux_base->{$oid_linux_swap_free} * 1024
     };
 
     $mem->{memused} = $mem->{memtotal}

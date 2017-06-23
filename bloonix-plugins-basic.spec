@@ -1,6 +1,6 @@
 Summary: Basic Bloonix plugins.
 Name: bloonix-plugins-basic
-Version: 0.62
+Version: 0.64
 Release: 1%{dist}
 License: Commercial
 Group: Utilities/System
@@ -82,6 +82,10 @@ rm -rf %{buildroot}
 %doc %attr(0444, root, root) %{docdir}/LICENSE
 
 %changelog
+* Fri Jun 23 2017 Jonny Schulz <js@bloonix.de> - 0.64-1
+- check-snmp-mem: fixed kilobytes -> bytes.
+* Fri Jun 09 2017 Jonny Schulz <js@bloonix.de> - 0.63-1
+- check-http: added new parameter --http-header.
 * Tue May 30 2017 Jonny Schulz <js@bloonix.de> - 0.62-1
 - Fixed uninitialized variable $name in check-rbl.
 * Wed Jan 25 2017 Jonny Schulz <js@bloonix.de> - 0.61-1
