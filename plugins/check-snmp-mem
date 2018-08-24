@@ -223,10 +223,12 @@ sub get_base_mem_usage {
     $stat->{memusedper} = sprintf("%.2f", 100 * $stat->{memused} / $stat->{memtotal});
 
     # swap
-    $stat->{swaptotal} = $mem_base->{$mem->{virt_total}} * $mem_base->{$mem->{virt_unit}};
-    $stat->{swapused} = $mem_base->{$mem->{virt_used}} * $mem_base->{$mem->{virt_unit}};
-    $stat->{swapfree} = $stat->{swaptotal} - $stat->{swapused};
-
+    if ($mem->{virt_unit}) {
+        $stat->{swaptotal} = $mem_base->{$mem->{virt_total}} * $mem_base->{$mem->{virt_unit}};
+        $stat->{swapused} = $mem_base->{$mem->{virt_used}} * $mem_base->{$mem->{virt_unit}};
+        $stat->{swapfree} = $stat->{swaptotal} - $stat->{swapused};
+    }
+    
     if ($stat->{swaptotal}) {
         $stat->{swapusedper} = sprintf("%.2f", 100 * $stat->{swapused} / $stat->{swaptotal});
     } else {
